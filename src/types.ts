@@ -4,7 +4,7 @@ export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD' | 'INSANE';
 export type GameMode = 'CASUAL' | 'DEFAULT';
 
 export interface GameState {
-  screen: 'MENU' | 'RULES' | 'THEME_SELECT' | 'PLAYING' | 'GAMEOVER';
+  screen: 'INTRO' | 'MENU' | 'RULES' | 'THEME_SELECT' | 'PLAYING' | 'GAMEOVER';
   mode: GameMode;
   difficulty: GameDifficulty;
   theme: WordTheme | 'MIXED' | null;
@@ -13,10 +13,12 @@ export interface GameState {
   word: string;
   wordHint: string;
   wordClue: string;
-  guessedLetters: string[]; // Set is harder to clone for localStorage
+  guessedLetters: string[]; // using array instead of Set cause its easier to save to localStorage
   isLost: boolean;
   isWon: boolean;
   hintsUsed: number;
-  seenWords: Record<string, string[]>; // per-theme seen word tracking
-  hearts: number; // DEFAULT mode only — starts at 5, zeroed on INSANE
+  seenWords: Record<string, string[]>; // tracks which words you've already played per theme
+  hearts: number; // your lives in default mode (insane mode has 0 lol)
+  roundsWonInLevel: number;
+  fabulousStreak: number;
 }

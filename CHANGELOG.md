@@ -2,6 +2,27 @@
 
 All notable changes to HANGMAN will be documented in this file.
 
+---
+
+## Versioning & Release Rules
+
+### Version Format: `vX.Y`
+- **X**: Major version (1-∞) — Breaking changes, major features, architectural shifts.
+- **Y**: Minor version (1-∞) — Bug fixes, small feature additions, refinements.
+- Example: `v1.0` → `v1.1` (bug fix) → `v2.0` (major feature/redesign) → `v2.1` (refinement).
+
+### Developer Checklist (Before Every Release)
+- **[ ] Update `APP_VERSION`** in `src/utils/gameConstants.ts` to match the new tag.
+- **[ ] Update `version.json`** (if OTA Update feature is active) with the new version string and release notes.
+- **[ ] Update this CHANGELOG.md** with a new version section listing all changes.
+- **[ ] Update `README.md`** if features, setup, or user-facing behavior changed.
+- **[ ] Update `docs/Notes.md`** if dev patterns, architecture, or gotchas were discovered.
+- **[ ] Create a git tag** (e.g., `git tag v2.2`) and push.
+- **[ ] Build release artifacts**: Run the full build pipeline and generate `.exe` (Windows), `.msi` (Windows installer), and `.apk` (Android — when ready).
+- **[ ] Upload builds** to GitHub Releases or your distribution channel.
+
+---
+
 ## [v2.1] - 2026-04-09
 
 ### Fixed

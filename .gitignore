@@ -56,6 +56,10 @@ yarn-error.log*
 Thumbs.db
 .env.example
 
+# Data folder. To maintain fair-play and prevent score farming
+src/data/
 
-# Maintainer Personal Files
-Notes.md
+# Developer Personal Files
+backups/
+docs/
+.agents/

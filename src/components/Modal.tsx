@@ -1,6 +1,7 @@
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, X, Download, CheckCircle, XCircle } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useOnClickOutside } from '../hooks/useOnClickOutside';
+import { downloadAndInstallUpdate, isTauriApp, type UpdateProgress } from '../utils/updater';
 
 import type { ReactNode } from 'react';
 
@@ -87,6 +88,163 @@ export const DangerModal = ({ isOpen, onClose, onConfirm, title, description, re
             {confirmText}
           </button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+interface UpdateWarningModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onContinue: () => void;
+  version: string;
+}
+
+export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: UpdateWarningModalProps) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [stage, setStage] = useState<'info' | 'downloading' | 'done' | 'error'>('info');
+  const [progress, setProgress] = useState<UpdateProgress>({ downloaded: 0, total: 0 });
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useOnClickOutside(modalRef, () => { if (stage === 'info' || stage === 'error') onClose(); });
+
+  if (!isOpen) return null;
+
+  const canAutoUpdate = isTauriApp();
+  const progressPercent = progress.total > 0 ? Math.round((progress.downloaded / progress.total) * 100) : 0;
+
+  const handleInstall = async () => {
+    if (!canAutoUpdate) {
+      // Fallback: open GitHub releases page in browser (dev mode only)
+      onContinue();
+      return;
+    }
+    setStage('downloading');
+    try {
+      await downloadAndInstallUpdate((p) => setProgress(p));
+      setStage('done');
+      // On Windows the app exits automatically before reaching here
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Update failed. Please try again later.');
+      setStage('error');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/85 backdrop-blur-md px-4">
+      <div ref={modalRef} className="max-w-lg w-full bg-slate-900 border-2 border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.3)] rounded-2xl p-6 animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center gap-3 text-amber-500">
+            {stage === 'downloading' ? <Download size={28} className="animate-bounce" /> : 
+             stage === 'done' ? <CheckCircle size={28} className="text-emerald-400" /> : 
+             stage === 'error' ? <XCircle size={28} className="text-rose-500" /> :
+             <AlertTriangle size={28} />}
+            <h2 className="font-['Orbitron'] font-black text-lg tracking-widest">
+              {stage === 'info' ? 'BEFORE YOU UPDATE' : 
+               stage === 'downloading' ? 'UPDATING...' : 
+               stage === 'done' ? 'UPDATE COMPLETE' : 
+               'UPDATE FAILED'}
+            </h2>
+          </div>
+          {(stage === 'info' || stage === 'error') && (
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+              <X size={24} />
+            </button>
+          )}
+        </div>
+
+        {stage === 'info' && (
+          <>
+            <div className="space-y-4 text-sm font-['JetBrains_Mono'] mb-6">
+              <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
+                <p className="text-amber-400 font-bold mb-1">⚠ Windows SmartScreen</p>
+                <p className="text-slate-300 leading-relaxed">Windows may show a SmartScreen warning because this app isn't code-signed. Code signing certificates cost $100+/year — unreasonable for a free indie game. Click <span className="text-white font-bold">"More info"</span> → <span className="text-white font-bold">"Run anyway"</span> if prompted.</p>
+              </div>
+
+              <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
+                <p className="text-cyan-400 font-bold mb-1">🛡 Admin Permission (UAC)</p>
+                <p className="text-slate-300 leading-relaxed">The update installer needs admin privileges to modify game files. This is standard for all Windows app updates. A UAC prompt will appear.</p>
+              </div>
+
+              <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
+                <p className="text-emerald-400 font-bold mb-1">💾 Your Data is Safe</p>
+                <p className="text-slate-300 leading-relaxed">Your scores, username, and settings are stored separately and will <strong className="text-white">persist automatically</strong>. No data will be lost.</p>
+              </div>
+
+              <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
+                <p className="text-violet-400 font-bold mb-1">🔐 Verified & Signed</p>
+                <p className="text-slate-300 leading-relaxed">Updates are cryptographically signed. The app verifies the signature before installing — no tampered files can get through.</p>
+              </div>
+            </div>
+
+            <p className="text-slate-500 text-xs font-['JetBrains_Mono'] mb-6">
+              Updating to <span className="text-slate-300">{version}</span> — The app will download, install, and restart automatically.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg font-['Orbitron'] text-slate-300 hover:text-white border border-slate-700 hover:bg-slate-800 transition-colors"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleInstall}
+                className="px-5 py-2 rounded-lg font-['Orbitron'] font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.6)] border border-emerald-400 transition-all"
+              >
+                UPDATE NOW
+              </button>
+            </div>
+          </>
+        )}
+
+        {stage === 'downloading' && (
+          <div className="space-y-4">
+            <p className="text-slate-300 font-['JetBrains_Mono'] text-sm">
+              Downloading and installing {version}... Do not close the app.
+            </p>
+            <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs font-['JetBrains_Mono'] text-slate-500">
+              <span>{progressPercent}%</span>
+              <span>
+                {progress.total > 0 
+                  ? `${(progress.downloaded / 1024 / 1024).toFixed(1)} / ${(progress.total / 1024 / 1024).toFixed(1)} MB`
+                  : 'Calculating...'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {stage === 'done' && (
+          <p className="text-emerald-400 font-['JetBrains_Mono'] text-sm">
+            Update installed. The app will restart momentarily...
+          </p>
+        )}
+
+        {stage === 'error' && (
+          <div className="space-y-4">
+            <p className="text-rose-400 font-['JetBrains_Mono'] text-sm">{errorMsg}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg font-['Orbitron'] text-slate-300 hover:text-white border border-slate-700 hover:bg-slate-800 transition-colors"
+              >
+                CLOSE
+              </button>
+              <button
+                onClick={() => { setStage('info'); setErrorMsg(''); }}
+                className="px-5 py-2 rounded-lg font-['Orbitron'] font-bold bg-amber-600 hover:bg-amber-500 text-white border border-amber-400 transition-all"
+              >
+                TRY AGAIN
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

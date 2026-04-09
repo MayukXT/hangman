@@ -1,7 +1,7 @@
 import type { GameDifficulty } from '../types';
 import type { AccentColorId } from '../hooks/useWaveAccent';
 
-export const APP_VERSION = 'v2.0';
+export const APP_VERSION = 'v2.2';
 
 export const getDifficultyMaxMistakes = (diff: GameDifficulty): number => {
   switch (diff) {
@@ -9,6 +9,15 @@ export const getDifficultyMaxMistakes = (diff: GameDifficulty): number => {
     case 'NORMAL': return 6;
     case 'HARD': return 4;
     case 'INSANE': return 3;
+  }
+};
+
+export const getLevelRoundRequirement = (diff: GameDifficulty): number => {
+  switch (diff) {
+    case 'EASY': return 3;
+    case 'NORMAL': return 5;
+    case 'HARD': return 7;
+    case 'INSANE': return Infinity;
   }
 };
 

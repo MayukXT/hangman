@@ -28,7 +28,7 @@ const AccentContext = createContext<AccentContextType | null>(null);
 
 import { flushSync } from 'react-dom';
 
-// Raw Hex mappings hoisted to avoid re-creation
+  // hex colors for each accent (kept outside the component so they're not recreated)
 const getHex = (c: AccentColorId) => {
   switch (c) {
     case 'RED': return '#f43f5e';
@@ -61,14 +61,13 @@ export const AccentProvider = ({ children }: { children: React.ReactNode }) => {
   const triggerWave = (color: AccentColorId, x: number, y: number) => {
     localStorage.setItem('arcade-hangman-accent', color);
 
-    // Check graphics mode from localStorage directly to avoid coupling contexts
+    // check graphics mode directly from localStorage so we don't need to import the other context
     const graphicsMode = localStorage.getItem('arcade-hangman-graphics') || 'FANCY';
     
-    // Calculate duration based on speed 1-10
-    // Speed 10 -> 250ms, Speed 5 -> 1500ms, Speed 1 -> 2500ms
+    // wave speed: 10 = crazy fast (250ms), 1 = slow motion (2500ms)
     const calcDurationMs = (10 - waveSpeed) * 250 + 250;
 
-    // LIGHT mode: instant swap, zero GPU work, no transitions
+    // light mode just swaps instantly, no fancy animations
     if (graphicsMode === 'LIGHT') {
       setWave({ color, originX: x, originY: y, timestamp: Date.now(), durationMs: calcDurationMs });
       return;
@@ -93,7 +92,7 @@ export const AccentProvider = ({ children }: { children: React.ReactNode }) => {
 
       const durationMs = calcDurationMs;
 
-      // GPU View Transition wipe
+      // circular wipe animation using the view transitions API
       document.documentElement.animate(
         [
           { clipPath: `circle(0px at ${x}px ${y}px)` },
@@ -106,12 +105,12 @@ export const AccentProvider = ({ children }: { children: React.ReactNode }) => {
         }
       );
 
-      // Skip the shockwave ring in Light mode
+      // no shockwave ring in light mode
       if (graphicsMode === 'LIGHT') return;
 
       const hex = getHex(color);
 
-      // Create the trailing shockwave — batch all styles in one Object.assign to avoid layout thrashing
+      // the expanding ring effect that follows the wipe
       const ring = document.createElement('div');
       Object.assign(ring.style, {
         position: 'fixed',

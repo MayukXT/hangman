@@ -1,18 +1,23 @@
 import { GameMode, GameDifficulty } from '../types';
 import { Gamepad2, Trophy, ScrollText, Check, User } from 'lucide-react';
+import { useState } from 'react';
 import { useAccent } from '../hooks/useWaveAccent';
 import { getAccentTokens, APP_VERSION } from '../utils/gameConstants';
+import { UpdateWarningModal } from './Modal';
+import { type UpdateInfo } from '../utils/updater';
 
 interface MenuScreenProps {
   onStartGame: (mode: GameMode, difficulty: GameDifficulty) => void;
   onOpenRules: () => void;
   highScore: number;
   username: string;
+  updateInfo: UpdateInfo | null;
 }
 
-export const MenuScreen = ({ onStartGame, onOpenRules, highScore, username }: MenuScreenProps) => {
+export const MenuScreen = ({ onStartGame, onOpenRules, highScore, username, updateInfo }: MenuScreenProps) => {
   const { wave } = useAccent();
   const themeTokens = getAccentTokens(wave.color);
+  const [showUpdateWarning, setShowUpdateWarning] = useState(false);
 
   return (
     <div className="w-full flex justify-center min-h-screen items-center relative overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0f] to-black">
@@ -89,10 +94,34 @@ export const MenuScreen = ({ onStartGame, onOpenRules, highScore, username }: Me
 
       </div>
 
-      {/* Version badge — bottom left, accent color, retro font */}
-      <div className={`fixed bottom-4 left-5 font-['Press_Start_2P'] text-[10px] tracking-widest opacity-60 hover:opacity-100 transition-opacity ${themeTokens.text}`}>
-        {APP_VERSION}
-      </div>
+      {/* Version badge / Update card — bottom left */}
+      {updateInfo ? (
+        <div className="fixed bottom-4 left-5 z-20">
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-900/95 backdrop-blur-sm border-2 border-emerald-500 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.25)] animate-in fade-in duration-500">
+            <div>
+              <span className="font-['Press_Start_2P'] text-[8px] text-emerald-400 block leading-tight">UPDATE AVAILABLE</span>
+              <span className="font-['Orbitron'] text-[10px] text-slate-400 tracking-wider">{updateInfo.version}</span>
+            </div>
+            <button 
+              onClick={() => setShowUpdateWarning(true)}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-['Orbitron'] text-xs font-bold rounded-lg transition-all shadow-[0_0_10px_rgba(16,185,129,0.4)] active:scale-95"
+            >
+              UPDATE
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={`fixed bottom-4 left-5 font-['Press_Start_2P'] text-[10px] tracking-widest opacity-60 hover:opacity-100 transition-opacity ${themeTokens.text}`}>
+          {APP_VERSION}
+        </div>
+      )}
+
+      <UpdateWarningModal
+        isOpen={showUpdateWarning}
+        onClose={() => setShowUpdateWarning(false)}
+        onContinue={() => setShowUpdateWarning(false)}
+        version={updateInfo?.version || ''}
+      />
     </div>
   );
 };

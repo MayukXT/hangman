@@ -3,12 +3,11 @@ import { motion } from 'framer-motion';
 import { GameState } from '../types';
 import { getDifficultyMaxMistakes } from '../utils/gameConstants';
 import { HangmanFigure } from './HangmanFigure';
-import { Lightbulb, LayoutDashboard, Settings, RotateCcw, Volume2, VolumeX, User, Trash2, Palette } from 'lucide-react';
+import { Lightbulb, LayoutDashboard, RotateCcw, User } from 'lucide-react';
 import { sfx } from '../utils/audio';
 import { DangerModal } from './Modal';
-import { useOnClickOutside } from '../hooks/useOnClickOutside';
-import { useAccent, AccentColorId } from '../hooks/useWaveAccent';
-import { getAccentTokens } from '../utils/gameConstants';
+import { useAccent } from '../hooks/useWaveAccent';
+import { getAccentTokens, getLevelRoundRequirement } from '../utils/gameConstants';
 import { useGraphics } from '../hooks/useGraphics';
 
 const KEYBOARD = [
@@ -17,7 +16,7 @@ const KEYBOARD = [
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
 ];
 
-// Shadow color map hoisted outside component to avoid re-creation
+// shadow colors for the wave effect (kept outside so it doesn't get remade every render)
 const ACCENT_SHADOW_MAP: Record<string, string> = {
   RED: 'rgba(249, 115, 22, 0.7)',
   YELLOW: 'rgba(251, 191, 36, 0.7)',
@@ -28,17 +27,17 @@ const ACCENT_SHADOW_MAP: Record<string, string> = {
 
 interface GameScreenProps {
   state: GameState;
+  highScore: number;
   username: string;
   onGuess: (letter: string) => void;
   onHint: () => void;
   onNextWord: () => void;
   onReturnMenu: () => void;
   onRestartInPlace: () => void;
-  onChangeNameClick: () => void;
   onClearData: () => void;
 }
 
-export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onReturnMenu, onRestartInPlace, onChangeNameClick, onClearData }: GameScreenProps) => {
+export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNextWord, onReturnMenu, onRestartInPlace, onClearData }: GameScreenProps) => {
   const [isAbortModalOpen, setIsAbortModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
@@ -53,30 +52,30 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
   const isWinLocked = state.isWon;
   const isFlawlessWin = isWinLocked && mistakes === 0;
 
-  // Memoize word characters to avoid split on every render
+  // split the word into letters (cached so we don't redo it constantly)
   const wordChars = useMemo(() => state.word.split(''), [state.word]);
-  // Memoize guessed set for O(1) lookups instead of O(n) includes
+  // set for fast lookups instead of searching through the array every time
   const guessedSet = useMemo(() => new Set(state.guessedLetters), [state.guessedLetters]);
 
-  // Background mapping
+  // bg color
   const bgTheme = 'bg-[#0a0a0f]';
 
-  // Cache wave-target element references — re-query only when word changes (keyboard re-renders)
+  // grab all the wave-target elements and cache them so we don't keep querying the DOM
   const waveElCacheRef = useRef<HTMLElement[]>([]);
   useEffect(() => {
-    // Defer cache build to after paint so all .wave-target elements exist
+    // wait for paint so the elements actually exist in the DOM
     requestAnimationFrame(() => {
       waveElCacheRef.current = Array.from(document.querySelectorAll('.wave-target')) as HTMLElement[];
     });
   }, [state.word, state.guessedLetters]);
 
-  // Dynamic wave effect – uses cached element refs, batched DOM reads then writes via rAF
+  // the wave animation that ripples across all the keys when you change accent color
   React.useEffect(() => {
     if (!wave.timestamp) return;
 
     const waveElements = waveElCacheRef.current;
     if (!waveElements.length) {
-      // Fallback if cache is empty (first render)
+      // if the cache is empty somehow, grab them now
       waveElCacheRef.current = Array.from(document.querySelectorAll('.wave-target')) as HTMLElement[];
     }
     const els = waveElCacheRef.current;
@@ -85,7 +84,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
     const maxDist = Math.hypot(window.innerWidth, window.innerHeight);
     const shadowColor = ACCENT_SHADOW_MAP[wave.color] || ACCENT_SHADOW_MAP.CYAN;
 
-    // Batch read pass: compute all element centers
+    // figure out how far each element is from the click point
     const entries: { el: HTMLElement; delay: number }[] = [];
     for (let i = 0; i < els.length; i++) {
       const el = els[i];
@@ -94,7 +93,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
       entries.push({ el, delay: (dist / maxDist) * wave.durationMs }); // Sync to the actual wipe speed!
     }
 
-    // Batch write pass inside rAF for smooth compositing
+    // do all the DOM writes in one frame so it doesn't stutter
     requestAnimationFrame(() => {
       for (const { el, delay } of entries) {
         el.style.setProperty('--wave-delay', `${delay}ms`);
@@ -105,7 +104,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
       void (entries[0]?.el.offsetWidth);
       for (const { el, delay } of entries) {
         el.classList.add('animate-wave-bump');
-        // Clean up class after animation so it doesn't get stuck across React re-renders
+        // remove the class after it plays so it can trigger again next time
         setTimeout(() => el.classList.remove('animate-wave-bump'), delay + 600);
       }
     });
@@ -114,7 +113,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
   return (
     <div className={`w-full min-h-screen flex flex-col items-center justify-center p-4 relative font-['JetBrains_Mono'] transition-colors duration-1000 ${bgTheme}`}>
       
-      {/* CRT Scanlines Overlay & Thematic Texture – Fancy only */}
+      {/* retro TV scanline overlay - only shows in fancy mode */}
       {isFancy && (
         <div className="floating-layer absolute inset-0 pointer-events-none overflow-hidden mix-blend-overlay opacity-30 z-0">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(0,0,0,0.5),rgba(30,30,30,0.5),rgba(0,0,0,0.5))] bg-[length:100%_4px,3px_100%] z-10" />
@@ -123,7 +122,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
 
       <MemoizedFloatingEnvironment theme={state.runtimeTheme || state.theme} isFancy={isFancy} />
 
-      {/* System Modals */}
+      {/* confirmation popups */}
       <DangerModal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
@@ -141,6 +140,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
         onClose={() => setIsAbortModalOpen(false)}
         onConfirm={() => {
           setIsAbortModalOpen(false);
+          sfx.stopCurrent();
           onReturnMenu();
         }}
         title="ABORT RUN"
@@ -153,13 +153,17 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
         confirmText="ABORT"
       />
 
-      {/* Top Navigation HUD */}
+      {/* top bar with all the buttons and info */}
       <div className="absolute top-6 left-[88px] right-6 z-40 flex justify-between items-start pointer-events-none">
         
-        {/* LEFT HUD - Buttons */}
+        {/* left side - high score, restart, menu */}
         <div className="flex gap-4 pointer-events-auto h-[52px] items-stretch">
+          <div className={`flex items-center justify-center gap-2 px-4 bg-slate-900 border-2 border-slate-700 rounded-xl text-slate-300 shadow-lg font-['Orbitron'] ${isFancy ? 'backdrop-blur-sm' : ''}`}>
+            <span className="font-bold tracking-widest text-sm flex items-center gap-1">HS🔥: <span className={themeTokens.text}>{highScore}</span></span>
+          </div>
+
           <button 
-            onClick={() => onRestartInPlace()}
+            onClick={() => { sfx.stopCurrent(); onRestartInPlace(); }}
             className="group flex items-center justify-center gap-2 px-5 bg-slate-900 border-2 border-slate-700 hover:border-amber-500 hover:bg-amber-950/30 rounded-xl text-slate-300 hover:text-amber-400 transition-all font-['Orbitron'] shadow-lg active:scale-95"
           >
             <RotateCcw size={20} className="group-hover:-rotate-180 transition-transform duration-700" />
@@ -175,11 +179,11 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
           </button>
         </div>
 
-        {/* RIGHT HUD */}
+        {/* right side - lives, username, score, theme */}
         <div className="flex flex-col items-end gap-3 pointer-events-auto">
           
           <div className="flex items-center gap-6">
-            {/* LIVES (Retro Pixely Hearts Top Right) */}
+            {/* pixely hearts for your remaining lives */}
             {state.mode === 'DEFAULT' && state.difficulty !== 'INSANE' && (
               <div className="flex gap-2 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
                 {Array.from({ length: 5 }, (_, i) => (
@@ -193,14 +197,14 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
               </div>
             )}
 
-            {/* USERNAME HUD PILL */}
+            {/* your name */}
             <div className={`flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700/50 rounded-lg shadow-md font-['Press_Start_2P'] ${isFancy ? 'backdrop-blur-sm' : ''}`}>
               <User size={14} className="text-violet-400" />
               <span className="text-xs text-slate-300 uppercase tracking-widest">{username}</span>
             </div>
           </div>
 
-          {/* SCORE & MODE BOX */}
+          {/* score and difficulty level */}
           <div className={`flex items-center gap-6 bg-slate-900 border border-slate-700 px-5 py-3 rounded-xl shadow-xl font-['Orbitron'] w-fit ${isFancy ? 'backdrop-blur-sm' : ''}`}>
             <div className="flex flex-col items-center border-r border-slate-700 pr-6">
               <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">SCORE</span>
@@ -209,14 +213,14 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
               </span>
             </div>
             <div className="flex flex-col items-center pl-2">
-              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">MODE</span>
+              <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">LEVEL</span>
               <span className={`text-xl font-bold tracking-wider ${state.difficulty === 'INSANE' ? 'text-rose-500 drop-shadow-[0_0_5px_rgba(244,63,94,0.8)]' : 'text-purple-400 drop-shadow-[0_0_5px_rgba(192,132,252,0.5)]'}`}>
                 {state.difficulty}
               </span>
             </div>
           </div>
           
-          {/* THEME + CLUE shared-width container */}
+          {/* theme name and clue card */}
           <div className="flex flex-col items-stretch w-56 mt-1">
             <div className={`font-['VT323'] text-2xl text-slate-300 bg-slate-900/60 px-4 py-1 rounded-lg border border-slate-800 flex gap-2 ${isFancy ? 'backdrop-blur-sm' : ''}`}>
               THEME: <span className={`tracking-wider uppercase ${state.difficulty === 'INSANE' ? 'line-through text-rose-500' : themeTokens.text}`}>
@@ -224,7 +228,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
               </span>
             </div>
 
-            {/* CLUE CARD BOX - matched width, accent color, readable text */}
+            {/* the clue for your current word */}
             <div className={`mt-2 w-full bg-slate-900/40 border border-slate-700/50 rounded-xl flex items-center justify-center p-3 text-center transition-all shadow-lg min-h-[5rem] ${isFancy ? 'backdrop-blur-md' : ''}`}>
               <span className={`font-['JetBrains_Mono'] text-sm sm:text-base italic opacity-80 leading-relaxed font-bold ${state.wordClue ? themeTokens.text : 'text-slate-500'}`}>
                 {state.wordClue || '🔍'}
@@ -234,12 +238,12 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
         </div>
       </div>
 
-      <div className="z-10 w-full max-w-5xl flex flex-col items-center gap-6 mt-20">
-        
-        {/* Game Area */}
-        <div className="flex flex-col md:flex-row items-center gap-8 md:gap-16 w-full justify-center mt-2">
+<div className="flex flex-col items-center gap-2 lg:gap-4 mt-2 md:mt-4 w-full max-w-5xl z-10">
+
+          {/* main game area */}
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 w-full justify-center mt-0">
           
-          {/* Hangman Display Node */}
+          {/* the hangman drawing */}
           <div className={`relative flex items-center justify-center p-6 bg-slate-900/80 rounded-2xl border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] transition-all duration-500 ${isFancy ? 'backdrop-blur-md' : ''} ${isFlawlessWin ? 'border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.3)]' : 'border-slate-800'}`}>
             <HangmanFigure mistakes={mistakes} maxMistakes={maxMistakes} isLost={isLossLocked} />
             
@@ -254,19 +258,49 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-10 flex-1">
-            
+          <div className="flex flex-col items-center gap-2 flex-1">
+
+            <div className="flex flex-col items-center gap-0">
+              {/* Fabulous Streak Counter */}
+              {state.fabulousStreak > 0 && mistakes === 0 && (
+                <div className="font-['Orbitron'] font-black text-amber-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.9)] animate-bounce text-2xl md:text-3xl tracking-[0.2em] uppercase italic mt-0 mb-0">
+                  FABULOUS<span className="text-amber-200 ml-2">({state.fabulousStreak}x)</span>
+                </div>
+              )}
+
+              {/* Progress Bars for DEFAULT mode */}
+              {state.mode === 'DEFAULT' && (
+                <div className="flex gap-2 items-center h-4 mt-1 mb-1">
+                  {state.difficulty === 'INSANE' ? (
+                    <div className={`text-3xl font-bold font-['Orbitron'] mt-[-6px] ${themeTokens.text} drop-shadow-[0_0_8px_currentColor]`}>∞</div>
+                  ) : (
+                    Array.from({ length: getLevelRoundRequirement(state.difficulty) }).map((_, idx) => (
+                      <div 
+                        key={idx}
+                        className={`h-2.5 w-8 rounded-full border border-black/30 transition-all duration-500 ${
+                          idx < state.roundsWonInLevel
+                            ? `bg-current shadow-[0_0_8px_currentColor] ${themeTokens.text}`
+                            : 'bg-slate-800'
+                        }`}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Word Display */}
-            <div className="flex flex-wrap justify-center gap-x-2 gap-y-4 px-2">
+            <div className="flex flex-wrap justify-center gap-x-2 gap-y-2 px-2">
               {wordChars.map((letter, index) => {
+                if (letter === ' ') return <div key={`${state.word}-space-${index}`} className="w-4" />;
                 const isRevealed = guessedSet.has(letter) || isLossLocked;
                 const isMissed = isLossLocked && !guessedSet.has(letter);
                 return (
                   <div 
                     key={`${state.word}-${index}`} 
                     className={`
-                      w-10 sm:w-12 h-14 sm:h-16 flex items-center justify-center text-3xl font-bold rounded-md
-                      border-b-4 transition-all duration-500 transform
+                      w-10 sm:w-12 h-16 sm:h-[4.5rem] flex items-center justify-center text-3xl font-bold rounded-md
+                        border-b-[6px] overflow-visible transition-all duration-500 transform
                       ${isFlawlessWin 
                         ? 'border-amber-400 bg-amber-950/40 text-amber-100 scale-100 shadow-[0_0_20px_rgba(245,158,11,0.4)] animate-flawless' 
                         : isRevealed 
@@ -283,27 +317,27 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
               })}
             </div>
 
-            {/* Hint Strip Mechanism */}
+            {/* hint text if you used your hint */}
             {state.hintsUsed > 0 && (
-              <div className="w-full max-w-xl overflow-hidden bg-slate-800/80 border border-yellow-500/50 rounded-xl p-4 shadow-[0_0_20px_rgba(234,179,8,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
-                <p className="font-['Orbitron'] text-sm text-yellow-500 mb-1 tracking-widest font-bold">DECRYPTED DATA:</p>
-                <p className="font-['VT323'] text-2xl text-slate-200">{state.wordHint}</p>
+              <div className="w-full max-w-xl overflow-hidden bg-slate-800/80 border border-yellow-500/50 rounded-xl p-2 px-4 shadow-[0_0_15px_rgba(234,179,8,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
+                <p className="font-['Orbitron'] text-xs text-yellow-500 mb-0 tracking-widest font-bold">DECRYPTED DATA:</p>
+                <p className="font-['VT323'] text-xl text-slate-200">{state.wordHint}</p>
               </div>
             )}
             
             {(isWinLocked || isLossLocked) && (
               <button 
-                onClick={onNextWord}
-                className={`group flex items-center gap-2 px-8 py-4 bg-slate-900 hover:bg-slate-800 border-2 rounded-xl font-bold transition-colors duration-0 hover:shadow-[0_0_30px_currentColor] active:scale-95 animate-in zoom-in ${themeTokens.border} ${themeTokens.text}`}
+                onClick={() => { sfx.stopCurrent(); onNextWord(); }}
+                className={`group flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 border-2 rounded-xl font-bold transition-colors duration-0 hover:shadow-[0_0_30px_currentColor] active:scale-95 animate-in zoom-in ${themeTokens.border} ${themeTokens.text}`}
               >
                 <span className="font-['Orbitron'] text-xl tracking-wider">
                   {isLossLocked
                     ? state.mode === 'CASUAL'
                       ? 'RESTART ->'
                       : state.hearts > 0
-                        ? `CONTINUE (-1 ♥) ->`
+                        ? `CONTINUE ->`
                         : 'GAME OVER! RETURN ->'
-                    : 'NEXT LEVEL ->'}
+                    : 'NEXT ROUND ->'}
                 </span>
               </button>
             )}
@@ -321,8 +355,8 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
           </div>
         </div>
 
-        {/* Keyboard Input Grid */}
-        <div className="mt-8 flex flex-col gap-2 sm:gap-3 w-full max-w-4xl px-2 z-20 pb-10">
+        {/* on-screen keyboard */}
+        <div className="mt-2 flex flex-col gap-2 sm:gap-3 w-full max-w-4xl px-2 z-20 pb-4">
           {KEYBOARD.map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-1 sm:gap-2">
               {row.map(key => (
@@ -347,7 +381,7 @@ export const GameScreen = ({ state, username, onGuess, onHint, onNextWord, onRet
   );
 };
 
-// Memoized keyboard key — only re-renders when its own state changes
+// each key is memoized so the whole keyboard doesn't re-render when you press one
 interface KeyboardKeyProps {
   letter: string;
   isGuessed: boolean;
@@ -380,7 +414,7 @@ const KeyboardKey = React.memo(({ letter, isGuessed, isCorrect, isWrong, isDisab
   );
 });
 
-// Pre-computed emoji config cache — keyed by theme string so randoms are stable across re-renders
+// cache the floating emoji positions so they don't reshuffle every render
 const emojiConfigCache = new Map<string, { emoji: string; initialX: number; initialY: number; driftX: number; duration: number; delay: number }[]>();
 
 const getEmojiConfigs = (theme: string, emojis: string[]) => {
@@ -446,5 +480,7 @@ const FloatingEnvironment = ({ theme, isFancy }: { theme: string | null; isFancy
   );
 };
 
-// Wrap in React.memo so the heavy framer-motion loops don't reset when `isSettingsOpen` changes state in the parent!
+// memoized so the floating emojis don't restart their animations when unrelated state changes
 const MemoizedFloatingEnvironment = React.memo(FloatingEnvironment);
+
+

@@ -1,22 +1,177 @@
-import { useState, useRef } from 'react';
-import { Settings, Volume2, VolumeX, User, Trash2, Palette, ChevronDown, Monitor } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Settings, Volume2, VolumeX, User, Trash2, Palette, ChevronDown, Monitor, Info, ExternalLink } from 'lucide-react';
+
+const GithubIcon = ({ size, className, style }: { size: number, className?: string, style?: React.CSSProperties }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+    style={style}
+  >
+    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+    <path d="M9 18c-4.51 2-5-2-7-2" />
+  </svg>
+);
 import { sfx } from '../utils/audio';
-import { DangerModal } from './Modal';
+import { DangerModal, UpdateWarningModal } from './Modal';
 import { useOnClickOutside } from '../hooks/useOnClickOutside';
 import { useAccent, AccentColorId } from '../hooks/useWaveAccent';
-import { getAccentTokens } from '../utils/gameConstants';
+import { getAccentTokens, APP_VERSION } from '../utils/gameConstants';
 import { useGraphics } from '../hooks/useGraphics';
+import { type UpdateInfo } from '../utils/updater';
 
 interface GlobalSettingsProps {
   isNameEntryActive: boolean;
   onChangeNameClick: () => void;
   onClearData: () => void;
+  updateInfo: UpdateInfo | null;
 }
 
-export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearData }: GlobalSettingsProps) => {
+const AboutModal = ({ isOpen, onClose, accentColor, updateInfo }: { isOpen: boolean; onClose: () => void; accentColor: string; updateInfo: UpdateInfo | null }) => {
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
+  const [showUpdateWarning, setShowUpdateWarning] = useState(false);
+
+  // Reset warning state when modal closes
+  useEffect(() => { if (!isOpen) setShowUpdateWarning(false); }, [isOpen]);
+  
+  useEffect(() => {
+    if (isOpen) {
+      // Fetch GitHub profile picture
+      fetch('https://api.github.com/users/MayukXT')
+        .then(res => res.json())
+        .then(data => {
+          if (data.avatar_url) setProfileUrl(data.avatar_url);
+        })
+        .catch(err => console.error('Failed to fetch github profile:', err));
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+    <UpdateWarningModal
+      isOpen={showUpdateWarning}
+      onClose={() => setShowUpdateWarning(false)}
+      onContinue={() => setShowUpdateWarning(false)}
+      version={updateInfo?.version || ''}
+    />
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div 
+        className="relative max-w-lg w-full bg-slate-900 border-2 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        style={{ borderColor: accentColor, boxShadow: `0 0 40px ${accentColor}40` }}
+      >
+        <div className="p-8">
+          <div className="flex items-center gap-6 mb-8 border-b border-slate-700 pb-8">
+            <div 
+              className="w-24 h-24 rounded-full overflow-hidden border-4 bg-slate-800 shadow-lg flex-shrink-0"
+              style={{ borderColor: accentColor, boxShadow: `0 0 20px ${accentColor}80` }}
+            >
+              {profileUrl ? (
+                <img src={profileUrl} alt="MayukXT GitHub" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-500">
+                  <User size={32} />
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <div>
+                <h3 className="font-['Press_Start_2P'] text-xs text-slate-400 mb-2">DEVELOPED BY</h3>
+                <h2 className="font-['Orbitron'] text-3xl font-black tracking-widest text-slate-100">MAYUK</h2>
+              </div>
+              
+              <a 
+                href="https://github.com/MayukXT" 
+                target="_blank" 
+                rel="noreopener noreferrer"
+                className="flex items-center gap-2 font-['VT323'] text-2xl tracking-wider transition-all hover:-translate-y-0.5 group w-fit"
+                style={{ 
+                  color: accentColor, 
+                  textShadow: `0 0 10px ${accentColor}80, 0 0 20px ${accentColor}40` 
+                }}
+              >
+                <GithubIcon 
+                  size={20} 
+                  className="group-hover:scale-110 transition-transform" 
+                  style={{ filter: `drop-shadow(0 0 8px ${accentColor}80)` }} 
+                />
+                @MayukXT
+              </a>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-4 mb-10">
+            <a 
+              href="https://github.com/MayukXT/hangman" 
+              target="_blank" 
+              rel="noreopener noreferrer"
+              className="flex items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 rounded-xl border border-slate-700 hover:border-slate-500 transition-all font-['Orbitron'] group"
+            >
+              <div className="flex items-center gap-3">
+                <ExternalLink size={20} className="text-slate-400 group-hover:text-white transition-colors" />
+                <span className="font-bold tracking-wider text-slate-300 group-hover:text-white transition-colors">Open Source Repository</span>
+              </div>
+              <span className="text-xs text-slate-500 font-bold group-hover:text-slate-400">View Code</span>
+            </a>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 flex flex-col gap-1">
+                <span className="font-['Press_Start_2P'] text-[10px] text-slate-500">VERSION</span>
+                <span className="font-['Orbitron'] font-bold text-slate-300 tracking-wider font-bold">{APP_VERSION}</span>
+              </div>
+              <div className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 flex flex-col gap-1">
+                <span className="font-['Press_Start_2P'] text-[10px] text-slate-500">BUILD DATE</span>
+                <span className="font-['Orbitron'] font-bold text-slate-300 tracking-wider">2026-04-09</span>
+              </div>
+              <div className={`col-span-2 p-4 bg-slate-800/30 rounded-xl border ${updateInfo ? 'border-emerald-500/50' : 'border-slate-700/50'} flex flex-col gap-1`}>
+                <span className="font-['Press_Start_2P'] text-[10px] text-slate-500">STATUS</span>
+                {updateInfo ? (
+                  <div className="flex items-center justify-between">
+                    <span className="font-['Orbitron'] font-bold text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)] tracking-wider text-sm">
+                      Update Available — {updateInfo.version}
+                    </span>
+                    <button
+                      onClick={() => setShowUpdateWarning(true)}
+                      className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-['Orbitron'] text-[10px] font-bold rounded-lg transition-all shadow-[0_0_10px_rgba(16,185,129,0.4)]"
+                    >
+                      UPDATE
+                    </button>
+                  </div>
+                ) : (
+                  <span className="font-['Orbitron'] font-bold text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)] tracking-wider">Up to Date</span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <button
+            onClick={onClose}
+            className="w-full py-4 text-slate-900 font-black font-['Orbitron'] text-xl tracking-widest rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+            style={{ backgroundColor: accentColor, boxShadow: `0 0 20px ${accentColor}60` }}
+          >
+            BACK TO MENU
+          </button>
+        </div>
+      </div>
+    </div>
+    </>
+  );
+};
+
+export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearData, updateInfo }: GlobalSettingsProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -33,6 +188,13 @@ export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearDa
 
   return (
     <div className="absolute top-6 left-6 z-[200]">
+      <AboutModal
+        isOpen={isAboutModalOpen}
+        onClose={() => setIsAboutModalOpen(false)}
+        accentColor={wave.color === 'RED' ? '#ef4444' : wave.color === 'YELLOW' ? '#eab308' : wave.color === 'CYAN' ? '#06b6d4' : wave.color === 'PURPLE' ? '#a855f7' : '#22c55e'}
+        updateInfo={updateInfo}
+      />
+
       <DangerModal
         isOpen={isResetModalOpen}
         onClose={() => setIsResetModalOpen(false)}
@@ -137,6 +299,14 @@ export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearDa
               )}
             </div>
           </div>
+
+          <button 
+            onClick={() => { setIsOpen(false); setIsAboutModalOpen(true); }}
+            className="w-full text-left px-5 py-4 hover:bg-slate-800 text-slate-300 transition-colors font-['Orbitron'] border-t border-slate-800 flex items-center gap-3 text-sm"
+          >
+            <Info size={18} className={themeTokens.text} />
+            <span className="font-bold tracking-wider">ABOUT OPTIONS</span>
+          </button>
 
           {!isNameEntryActive && (
             <button 
