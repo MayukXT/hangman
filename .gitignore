@@ -1,0 +1,57 @@
+# Node.js & npm
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+.npm
+*.tsbuildinfo
+
+# Vite
+dist/
+.vite/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.env.local
+.env.*.local
+*.sublime-project
+*.sublime-workspace
+
+# Environment Variables
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build Output
+build/
+*.wasm
+*.bundle.js
+
+# Tauri (Desktop App Build)
+src-tauri/target/
+src-tauri/gen/
+
+# Runtime
+dist-tauri/
+*.dmg
+*.msi
+*.exe
+*.deb
+*.AppImage
+
+# Development
+.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+Thumbs.db
+.env.example

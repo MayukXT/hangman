@@ -1,0 +1,283 @@
+import { useState, useEffect, useCallback } from 'react';
+import confetti from 'canvas-confetti';
+import { RefreshCw } from 'lucide-react';
+
+const CPP_WORDS = [
+  'POINTER', 'REFERENCE', 'TEMPLATE', 'POLYMORPHISM', 
+  'ENCAPSULATION', 'DESTRUCTOR', 'VIRTUAL', 'NAMESPACE', 
+  'CONSTRUCTOR', 'INHERITANCE', 'OVERLOADING', 'AUTO', 
+  'CONSTEXPR', 'VECTOR', 'LAMBDA', 'ITERATOR', 'FRIEND',
+  'STRUCT', 'UNION', 'TYPEDEF', 'VOLATILE'
+];
+
+const MAX_MISTAKES = 6;
+const KEYBOARD = [
+  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+  ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
+];
+
+const HangmanFigure = ({ mistakes, isLost }: { mistakes: number, isLost: boolean }) => {
+  const strokeColor = isLost ? 'stroke-rose-500' : 'stroke-cyan-400';
+  const shadowColor = isLost ? 'drop-shadow-[0_0_12px_rgba(244,63,94,0.8)]' : 'drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]';
+
+  return (
+    <svg 
+      height="280" 
+      width="280" 
+      className={`transition-colors duration-500 ${strokeColor} ${shadowColor} stroke-[4] fill-transparent`}
+      style={{ strokeLinecap: 'round', strokeLinejoin: 'round' }}
+    >
+      {/* Base & Pole */}
+      <line x1="20" y1="260" x2="160" y2="260" className="stroke-slate-500 drop-shadow-none" />
+      <line x1="90" y1="260" x2="90" y2="20" className="stroke-slate-500 drop-shadow-none" />
+      <line x1="90" y1="20" x2="220" y2="20" className="stroke-slate-500 drop-shadow-none" />
+      <line x1="220" y1="20" x2="220" y2="50" className="stroke-slate-500 drop-shadow-none" />
+      <line x1="90" y1="60" x2="130" y2="20" className="stroke-slate-500 drop-shadow-none stroke-[3]" />
+      
+      {/* Head */}
+      {mistakes >= 1 && <circle cx="220" cy="80" r="25" className="animate-draw" />}
+      {/* Body */}
+      {mistakes >= 2 && <line x1="220" y1="105" x2="220" y2="175" className="animate-draw" />}
+      {/* Left Arm */}
+      {mistakes >= 3 && <line x1="220" y1="125" x2="180" y2="165" className="animate-draw" />}
+      {/* Right Arm */}
+      {mistakes >= 4 && <line x1="220" y1="125" x2="260" y2="165" className="animate-draw" />}
+      {/* Left Leg */}
+      {mistakes >= 5 && <line x1="220" y1="175" x2="190" y2="230" className="animate-draw" />}
+      {/* Right Leg */}
+      {mistakes >= 6 && <line x1="220" y1="175" x2="250" y2="230" className="animate-draw" />}
+
+      {/* Dead eyes (if lost) */}
+      {isLost && (
+        <>
+          <line x1="210" y1="72" x2="216" y2="78" className="stroke-[3]" />
+          <line x1="216" y1="72" x2="210" y2="78" className="stroke-[3]" />
+          <line x1="224" y1="72" x2="230" y2="78" className="stroke-[3]" />
+          <line x1="230" y1="72" x2="224" y2="78" className="stroke-[3]" />
+        </>
+      )}
+    </svg>
+  );
+};
+
+export default function App() {
+  const [word, setWord] = useState('');
+  const [guessedLetters, setGuessedLetters] = useState<Set<string>>(new Set());
+  const [wins, setWins] = useState(() => {
+    const saved = localStorage.getItem('hangman-wins');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [losses, setLosses] = useState(() => {
+    const saved = localStorage.getItem('hangman-losses');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  // Initialize game
+  const startNewGame = useCallback(() => {
+    const randomWord = CPP_WORDS[Math.floor(Math.random() * CPP_WORDS.length)];
+    setWord(randomWord);
+    setGuessedLetters(new Set());
+  }, []);
+
+  useEffect(() => {
+    startNewGame();
+  }, [startNewGame]);
+
+  const mistakes = Array.from(guessedLetters).filter(letter => !word.includes(letter)).length;
+  const isLost = mistakes >= MAX_MISTAKES;
+  const isWon = word.length > 0 && word.split('').every(letter => guessedLetters.has(letter));
+
+  // Handle win
+  useEffect(() => {
+    if (isWon) {
+      const newWins = wins + 1;
+      setWins(newWins);
+      localStorage.setItem('hangman-wins', newWins.toString());
+      
+      const duration = 3 * 1000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+      const interval: any = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+        confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+      }, 250);
+
+      return () => clearInterval(interval);
+    }
+  }, [isWon, wins]);
+
+  const guess = useCallback((letter: string) => {
+    if (isWon || isLost) {
+      if (isLost) {
+        const newLosses = losses + 1;
+        setLosses(newLosses);
+        localStorage.setItem('hangman-losses', newLosses.toString());
+      }
+      return;
+    }
+    
+    setGuessedLetters(prev => {
+      const newSet = new Set(prev);
+      newSet.add(letter);
+      return newSet;
+    });
+  }, [isWon, isLost, losses]);
+
+  // Keyboard support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toUpperCase();
+      if (/^[A-Z]$/.test(key)) {
+        guess(key);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [guess]);
+
+  if (!word) return <div className="min-h-screen bg-[#0a0a0f]" />; // Loading state
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] text-gray-200 font-['JetBrains_Mono',monospace] flex flex-col items-center justify-center p-4 selection:bg-cyan-900">
+      
+      {/* Background decoration */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-20">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-900 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-900 rounded-full blur-[120px]" />
+      </div>
+
+      <div className="z-10 w-full max-w-4xl flex flex-col items-center gap-8">
+        
+        {/* Header */}
+        <div className="mb-4">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+            HANGMAN
+          </h1>
+        </div>
+
+        {/* Status Area */}
+        <div className="flex justify-between w-full max-w-md text-sm font-semibold tracking-wider text-slate-400 bg-slate-900/50 p-3 rounded-lg border border-slate-800 backdrop-blur-sm shadow-xl">
+          <div className="flex flex-col items-center">
+            <span>ERRORS</span>
+            <span className={`text-xl font-bold ${mistakes >= MAX_MISTAKES - 1 ? 'text-rose-500 animate-pulse' : 'text-cyan-400'}`}>
+              {mistakes} / {MAX_MISTAKES}
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span>WINS</span>
+            <span className="text-xl font-bold text-emerald-400">
+              {wins}
+            </span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span>LOSSES</span>
+            <span className="text-xl font-bold text-rose-400">
+              {losses}
+            </span>
+          </div>
+        </div>
+            <span>STATUS</span>
+            <span className={`text-xl font-bold ${
+              isWon ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 
+              isLost ? 'text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]' : 
+              'text-blue-400'
+            }`}>
+              {isWon ? 'COMPILATION SUCCESS' : isLost ? 'SEGMENTATION FAULT' : 'COMPILING...'}
+            </span>
+          </div>
+        </div>
+
+        {/* Game Area */}
+        <div className="flex flex-col md:flex-row items-center gap-12 w-full justify-center">
+          
+          {/* Hangman Display */}
+          <div className="relative flex items-center justify-center p-4 bg-slate-900/30 rounded-2xl border border-slate-800/50 shadow-[inset_0_0_30px_rgba(0,0,0,0.5)]">
+            <HangmanFigure mistakes={mistakes} isLost={isLost} />
+            
+            {/* Scanline overlay effect */}
+            <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-30 mix-blend-overlay rounded-2xl" />
+          </div>
+
+          <div className="flex flex-col items-center gap-10">
+            {/* Word Display */}
+            <div className="flex flex-wrap justify-center gap-3">
+              {word.split('').map((letter, index) => {
+                const isRevealed = guessedLetters.has(letter) || isLost;
+                const isMissed = isLost && !guessedLetters.has(letter);
+                return (
+                  <div 
+                    key={index} 
+                    className={`
+                      w-12 h-16 flex items-center justify-center text-3xl font-bold rounded-md
+                      border-b-4 transition-all duration-300 transform
+                      ${isRevealed ? 'border-cyan-500 bg-slate-800/80 scale-100 shadow-[0_4px_15px_rgba(34,211,238,0.15)]' : 'border-slate-600 bg-slate-900/40 scale-95'}
+                      ${isMissed ? 'text-rose-500 border-rose-500' : 'text-gray-100'}
+                    `}
+                  >
+                    <span className={`transition-opacity duration-300 ${isRevealed ? 'opacity-100' : 'opacity-0'}`}>
+                      {letter}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Restart Button */}
+            {(isWon || isLost) && (
+              <button 
+                onClick={startNewGame}
+                className="group flex items-center gap-2 px-6 py-3 bg-cyan-950/50 hover:bg-cyan-900 border border-cyan-500/50 hover:border-cyan-400 text-cyan-400 rounded-lg font-bold transition-all hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] active:scale-95"
+              >
+                <RefreshCw className="group-hover:rotate-180 transition-transform duration-500" size={20} />
+                RESTART COMPILER
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Keyboard */}
+        <div className="mt-8 flex flex-col gap-2 w-full max-w-3xl px-2">
+          {KEYBOARD.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex justify-center gap-2">
+              {row.map(key => {
+                const isGuessed = guessedLetters.has(key);
+                const isCorrect = isGuessed && word.includes(key);
+                const isWrong = isGuessed && !word.includes(key);
+
+                return (
+                  <button
+                    key={key}
+                    onClick={() => guess(key)}
+                    disabled={isGuessed || isWon || isLost}
+                    className={`
+                      relative overflow-hidden w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 rounded-lg text-lg sm:text-xl font-bold transition-all duration-200
+                      flex items-center justify-center border
+                      ${!isGuessed ? 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 hover:border-cyan-500 hover:text-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.2)] active:scale-90 cursor-pointer' : ''}
+                      ${isCorrect ? 'bg-cyan-950/80 border-cyan-500 text-cyan-400 shadow-[inset_0_0_10px_rgba(34,211,238,0.2)] cursor-default' : ''}
+                      ${isWrong ? 'bg-slate-900/50 border-slate-800 text-slate-600 cursor-default opacity-50' : ''}
+                    `}
+                  >
+                    {key}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </div>
+  );
+}
