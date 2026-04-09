@@ -23,6 +23,31 @@ All notable changes to HANGMAN will be documented in this file.
 
 ---
 
+## [v2.2] - 2026-04-10
+
+### Added
+- **Automatic OTA Updates**: In-app update checker using Tauri Updater Plugin. App silently checks GitHub Releases on launch, shows an update card in the menu and About screen, and installs updates with a progress bar — no manual download needed.
+- **ErrorBoundary**: Top-level crash recovery wrapper. If something explodes at runtime, the app shows a friendly error screen instead of a blank white crash.
+- **Updater Signature Verification**: All update artifacts are cryptographically signed. The app verifies the signature before installing — prevents tampered updates.
+- **version.json**: Fallback version endpoint for browser/dev mode update checks when Tauri API isn't available.
+
+### Changed
+- **App Icon**: All icons (exe, installer, taskbar, tray) regenerated from the new `Hangman Icon.png` source across all required sizes and formats (ICO, ICNS, PNG, Android, iOS).
+- **Version Sync**: `tauri.conf.json` version bumped to `2.2.0` to match `APP_VERSION`.
+- **Sound File Rename**: `Hangman Intro.mp3` → `HangmanIntro.mp3` (removed space for consistency).
+- **Tech Stack**: Upgraded to React 19, Vite 7, Framer Motion 12, Tailwind CSS 4.
+
+### Fixed
+- **Unused Imports**: Removed unused `Settings`, `Volume2`, `VolumeX`, `Trash2`, `Palette`, `AccentColorId`, `useOnClickOutside` imports from `GameScreen.tsx`.
+- **GithubIcon Style Prop**: Added missing `style` prop type to inline SVG component in `GlobalSettings.tsx`.
+- **tsconfig BaseUrl**: Removed deprecated `baseUrl` and unused `paths` alias from `tsconfig.json`.
+
+### Removed
+- `src/App.tsx.backup` — stale backup file removed from repo and disk.
+- Docs files (`GAME_RULES.md`, `Notes.md`, `new-plans.md`) moved out of git tracking (gitignored under `docs/`).
+
+---
+
 ## [v2.1] - 2026-04-09
 
 ### Fixed

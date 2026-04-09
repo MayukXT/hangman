@@ -1,8 +1,10 @@
 # HANGMAN: A Visual Masterpiece
 
 ![HANGMAN](https://img.shields.io/badge/Made%20by-Mayuk-blueviolet?style=flat-square)
-![Version](https://img.shields.io/badge/version-2.1-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.2-brightgreen?style=flat-square)
 ![Status](https://img.shields.io/badge/status-stable-blue?style=flat-square)
+![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-orange?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows-informational?style=flat-square)
 
 **A retro-futuristic arcade Hangman experience built with React, TypeScript, Tailwind CSS, and Vite.**
 
@@ -117,13 +119,14 @@ New themes can easily be added to [src/data/words.ts](src/data/words.ts).
 
 | Layer | Technology |
 |-------|-----------|
-| **Framework** | React 18 + TypeScript |
-| **Styling** | Tailwind CSS + Custom Keyframes |
-| **Bundler** | Vite 5 |
-| **Animations** | Framer Motion (intro), CSS Keyframes (UI) |
+| **Framework** | React 19 + TypeScript 5 |
+| **Styling** | Tailwind CSS 4 + Custom Keyframes |
+| **Bundler** | Vite 7 |
+| **Animations** | Framer Motion 12 (intro), CSS Keyframes (UI) |
 | **State** | React Hooks + localStorage |
-| **Audio** | Web Audio API (synth-based SFX) |
-| **Desktop** | Tauri (Rust backend) |
+| **Audio** | Web Audio API + MP3 (Web Audio synthesis + sound effects) |
+| **Desktop** | Tauri 2 (Rust backend) |
+| **Updates** | Tauri Updater Plugin (automatic OTA) |
 
 ---
 
@@ -221,4 +224,22 @@ Found a bug? Have a feature request? Open an issue on [GitHub](https://github.co
 
 **Mayuk** — Crafted with obsessive attention to retro-futuristic UX detail.
 
+[![GitHub](https://img.shields.io/badge/GitHub-MayukXT-181717?style=flat-square&logo=github)](https://github.com/MayukXT)
+
 🎮 *"A VISUAL MASTERPIECE"*
+
+---
+
+## 📄 License
+
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**.
+
+You are free to:
+- **Share** — copy and redistribute the material in any medium or format
+- **Adapt** — remix, transform, and build upon the material
+
+Under the following terms:
+- **Attribution** — You must give appropriate credit to the original developer **Mayuk** ([@MayukXT](https://github.com/MayukXT)), provide a link to the original project, and indicate if changes were made.
+- **NonCommercial** — You may not use the material for commercial purposes.
+
+See the full license in [LICENSE](LICENSE).
