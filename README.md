@@ -207,26 +207,7 @@ hangman/
 
 ## 📝 Changelog
 
-### v2.1 (Current)
-- **Fixed**: Wave accent keyboard borders now properly clean up between rounds (no stuck colors)
-- **Fixed**: Wave timing now syncs with graphics engine for perfect delay cascades
-- **Improved**: Flawless UI visual feedback (golden glow on all word tiles, entire hangman container)
-- **Improved**: HUD button alignment (Settings, Restart, Menu buttons now perfectly height-matched)
-- **Redesigned**: Lives display moved to top-right as full-size retro pixel hearts
-- **New**: Light mode hides wave speed slider (reduces noisiness)
-- **UX**: Intro screen now fills entire viewport for maximum cinematic impact
-
-### v2.0
-- Complete redesign with intro sequence
-- Radial wave accent system
-- Dual graphics modes (FANCY / LIGHT)
-- Flawless win detection & visual reward
-
-### v1.0
-- Initial Hangman release
-- Core gameplay loop
-- Themed word pools
-- localStorage persistence
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and release notes.
 
 ---
 
