@@ -8,6 +8,8 @@
 
 **A retro-futuristic arcade Hangman experience built with React, TypeScript, Tailwind CSS, and Vite.**
 
+> **📚 Documentation** — [Changelog](CHANGELOG.md) • [License](LICENSE) • [GitHub](https://github.com/MayukXT/hangman)
+
 ---
 
 ## 🎮 Features
@@ -230,7 +232,18 @@ Found a bug? Have a feature request? Open an issue on [GitHub](https://github.co
 
 ---
 
-## 📄 License
+## � Documentation & Resources
+
+| Document | Purpose |
+|----------|---------|
+| [**CHANGELOG.md**](CHANGELOG.md) | All version history, features, and bug fixes |
+| [**LICENSE**](LICENSE) | CC BY-NC 4.0 license with attribution requirements |
+| [**GitHub Issues**](https://github.com/MayukXT/hangman/issues) | Bug reports and feature requests |
+| [**GitHub Releases**](https://github.com/MayukXT/hangman/releases) | Download installers and release notes |
+
+---
+
+## �📄 License
 
 This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)**.
 
