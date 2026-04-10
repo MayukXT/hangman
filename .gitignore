@@ -55,8 +55,8 @@ yarn-error.log*
 Thumbs.db
 .env.example
 
-# Data folder. To maintain fair-play and prevent score farming
-src/data/
+# Sound effects (large binary files)
+src/data/Sound Effects/
 
 # Developer Personal Files
 backups/
