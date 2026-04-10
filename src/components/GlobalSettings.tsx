@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Settings, Volume2, VolumeX, User, Trash2, Palette, ChevronDown, Monitor, Info, ExternalLink } from 'lucide-react';
+import { Settings, Volume2, VolumeX, User, Trash2, Palette, ChevronDown, Monitor, Info, ExternalLink, RefreshCw } from 'lucide-react';
 
 const GithubIcon = ({ size, className, style }: { size: number, className?: string, style?: React.CSSProperties }) => (
   <svg 
@@ -25,7 +25,7 @@ import { useOnClickOutside } from '../hooks/useOnClickOutside';
 import { useAccent, AccentColorId } from '../hooks/useWaveAccent';
 import { getAccentTokens, APP_VERSION } from '../utils/gameConstants';
 import { useGraphics } from '../hooks/useGraphics';
-import { type UpdateInfo } from '../utils/updater';
+import { type UpdateInfo, checkForUpdate } from '../utils/updater';
 
 interface GlobalSettingsProps {
   isNameEntryActive: boolean;
@@ -34,12 +34,25 @@ interface GlobalSettingsProps {
   updateInfo: UpdateInfo | null;
 }
 
-const AboutModal = ({ isOpen, onClose, accentColor, updateInfo }: { isOpen: boolean; onClose: () => void; accentColor: string; updateInfo: UpdateInfo | null }) => {
+const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }: { isOpen: boolean; onClose: () => void; accentColor: string; updateInfo: UpdateInfo | null; onUpdateFound: (info: UpdateInfo) => void }) => {
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [showUpdateWarning, setShowUpdateWarning] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [localUpdateInfo, setLocalUpdateInfo] = useState<UpdateInfo | null>(updateInfo);
 
   // Reset warning state when modal closes
   useEffect(() => { if (!isOpen) setShowUpdateWarning(false); }, [isOpen]);
+  useEffect(() => { setLocalUpdateInfo(updateInfo); }, [updateInfo]);
+
+  const handleManualCheck = async () => {
+    setChecking(true);
+    const result = await checkForUpdate();
+    setChecking(false);
+    if (result) {
+      setLocalUpdateInfo(result);
+      onUpdateFound(result);
+    }
+  };
   
   useEffect(() => {
     if (isOpen) {
@@ -61,7 +74,7 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo }: { isOpen: bool
       isOpen={showUpdateWarning}
       onClose={() => setShowUpdateWarning(false)}
       onContinue={() => setShowUpdateWarning(false)}
-      version={updateInfo?.version || ''}
+      version={localUpdateInfo?.version || ''}
     />
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
       <div 
@@ -130,14 +143,14 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo }: { isOpen: bool
               </div>
               <div className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 flex flex-col gap-1">
                 <span className="font-['Press_Start_2P'] text-[10px] text-slate-500">BUILD DATE</span>
-                <span className="font-['Orbitron'] font-bold text-slate-300 tracking-wider">2026-04-09</span>
+                <span className="font-['Orbitron'] font-bold text-slate-300 tracking-wider">2026-04-10</span>
               </div>
-              <div className={`col-span-2 p-4 bg-slate-800/30 rounded-xl border ${updateInfo ? 'border-emerald-500/50' : 'border-slate-700/50'} flex flex-col gap-1`}>
+              <div className={`col-span-2 p-4 bg-slate-800/30 rounded-xl border ${localUpdateInfo ? 'border-emerald-500/50' : 'border-slate-700/50'} flex flex-col gap-1`}>
                 <span className="font-['Press_Start_2P'] text-[10px] text-slate-500">STATUS</span>
-                {updateInfo ? (
+                {localUpdateInfo ? (
                   <div className="flex items-center justify-between">
                     <span className="font-['Orbitron'] font-bold text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.5)] tracking-wider text-sm">
-                      Update Available — {updateInfo.version}
+                      Update Available — {localUpdateInfo.version}
                     </span>
                     <button
                       onClick={() => setShowUpdateWarning(true)}
@@ -147,7 +160,17 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo }: { isOpen: bool
                     </button>
                   </div>
                 ) : (
-                  <span className="font-['Orbitron'] font-bold text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)] tracking-wider">Up to Date</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-['Orbitron'] font-bold text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.5)] tracking-wider">Up to Date</span>
+                    <button
+                      onClick={handleManualCheck}
+                      disabled={checking}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-['Orbitron'] text-[10px] font-bold rounded-lg transition-all disabled:opacity-50"
+                    >
+                      <RefreshCw size={10} className={checking ? 'animate-spin' : ''} />
+                      {checking ? 'CHECKING...' : 'CHECK'}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -173,6 +196,8 @@ export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearDa
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [manualUpdateInfo, setManualUpdateInfo] = useState<UpdateInfo | null>(null);
+  const effectiveUpdateInfo = manualUpdateInfo ?? updateInfo;
 
   const settingsRef = useRef<HTMLDivElement>(null);
   useOnClickOutside(settingsRef, () => { setIsOpen(false); setIsAccordionOpen(false); });
@@ -192,7 +217,8 @@ export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearDa
         isOpen={isAboutModalOpen}
         onClose={() => setIsAboutModalOpen(false)}
         accentColor={wave.color === 'RED' ? '#ef4444' : wave.color === 'YELLOW' ? '#eab308' : wave.color === 'CYAN' ? '#06b6d4' : wave.color === 'PURPLE' ? '#a855f7' : '#22c55e'}
-        updateInfo={updateInfo}
+        updateInfo={effectiveUpdateInfo}
+        onUpdateFound={(info) => setManualUpdateInfo(info)}
       />
 
       <DangerModal

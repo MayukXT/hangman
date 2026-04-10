@@ -230,7 +230,7 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
 
             {/* the clue for your current word */}
             <div className={`mt-2 w-full bg-slate-900/40 border border-slate-700/50 rounded-xl flex items-center justify-center p-3 text-center transition-all shadow-lg min-h-[5rem] ${isFancy ? 'backdrop-blur-md' : ''}`}>
-              <span className={`font-['JetBrains_Mono'] text-sm sm:text-base italic opacity-80 leading-relaxed font-bold ${state.wordClue ? themeTokens.text : 'text-slate-500'}`}>
+              <span className={`font-['JetBrains_Mono'] text-sm sm:text-base italic opacity-80 leading-relaxed font-bold select-none pointer-events-none ${state.wordClue ? themeTokens.text : 'text-slate-500'}`}>
                 {state.wordClue || '🔍'}
               </span>
             </div>
@@ -292,7 +292,14 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
             {/* Word Display */}
             <div className="flex flex-wrap justify-center gap-x-2 gap-y-2 px-2">
               {wordChars.map((letter, index) => {
-                if (letter === ' ') return <div key={`${state.word}-space-${index}`} className="w-4" />;
+                if (letter === ' ') return (
+                  <div
+                    key={`${state.word}-space-${index}`}
+                    className="w-6 sm:w-8 h-16 sm:h-[4.5rem] flex items-end justify-center pb-1"
+                  >
+                    <div className="w-full border-b-[6px] border-slate-700/40 rounded-sm" />
+                  </div>
+                );
                 const isRevealed = guessedSet.has(letter) || isLossLocked;
                 const isMissed = isLossLocked && !guessedSet.has(letter);
                 return (
@@ -321,7 +328,7 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
             {state.hintsUsed > 0 && (
               <div className="w-full max-w-xl overflow-hidden bg-slate-800/80 border border-yellow-500/50 rounded-xl p-2 px-4 shadow-[0_0_15px_rgba(234,179,8,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
                 <p className="font-['Orbitron'] text-xs text-yellow-500 mb-0 tracking-widest font-bold">DECRYPTED DATA:</p>
-                <p className="font-['VT323'] text-xl text-slate-200">{state.wordHint}</p>
+                <p className="font-['VT323'] text-xl text-slate-200 select-none pointer-events-none">{state.wordHint}</p>
               </div>
             )}
             
