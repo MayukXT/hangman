@@ -1,7 +1,7 @@
 import type { GameDifficulty } from '../types';
 import type { AccentColorId } from '../hooks/useWaveAccent';
 
-export const APP_VERSION = 'v2.2.0';
+export const APP_VERSION = 'v2.3.0';
 
 export const getDifficultyMaxMistakes = (diff: GameDifficulty): number => {
   switch (diff) {

@@ -24,6 +24,14 @@ All notable changes to HANGMAN will be documented in this file.
 
 ---
 
+## [v2.3.0] - 2026-04-10
+
+### Changed
+- **Versioning**: Switched to semantic versioning (`vX.Y.Z` — major.features.fixes).
+- **Signed Releases**: Added GitHub Actions workflow for automated builds and code signing.
+
+---
+
 ## [v2.2.0] - 2026-04-10
 
 ### Added
