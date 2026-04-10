@@ -30,15 +30,12 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
-      - name: Decode certificate
-        run: |
-          $bytes = [Convert]::FromBase64String("${{ secrets.CERT_PFXDATA }}")
-          $pfxPath = "$env:RUNNER_TEMP\cert.pfx"
-          [IO.File]::WriteAllBytes($pfxPath, $bytes)
-          echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
-        shell: pwsh
-
-      - name: Build Tauri app
+      # ── Tauri updater signing (minisign) ──────────────────────────────────
+      # TAURI_SIGNING_PRIVATE_KEY + TAURI_SIGNING_PRIVATE_KEY_PASSWORD sign
+      # the .sig files used by the auto-updater. This is separate from the
+      # Windows code-signing certificate step below.
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Build Tauri app (draft release)
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,18 +45,77 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Hangman Game ${{ github.ref_name }}'
           releaseBody: 'See CHANGELOG.md for what changed in this release.'
-          releaseDraft: false
+          # Keep as draft so we can replace unsigned files with signed ones
+          # before publishing to users.
+          releaseDraft: true
           prerelease: false
 
-      - name: Sign installers
-        run: |
-          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" |
-            Where-Object { $_.FullName -match "x64" } |
-            Select-Object -Last 1 -ExpandProperty FullName
+      # ── Windows code-signing via Azure Key Vault ──────────────────────────
+      # AzureSignTool fetches your private key directly from Azure Key Vault,
+      # so the key never needs to leave Azure. The .pfx (CERT_PFXDATA) is no
+      # longer needed here; signing is done entirely through the Key Vault API.
+      #
+      # Required GitHub Secrets:
+      #   AZURE_KEY_VAULT_URI    - e.g. https://myvault.vault.azure.net
+      #   AZURE_TENANT_ID        - Azure Active Directory Tenant ID
+      #   AZURE_CLIENT_ID        - App Registration (Service Principal) client ID
+      #   AZURE_CLIENT_SECRET    - App Registration client secret
+      #   AZURE_CERT_NAME        - Name of the certificate in Key Vault
+      #                            (e.g. "HangmanSignCertificate")
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Install AzureSignTool
+        run: dotnet tool install --global AzureSignTool
+        shell: pwsh
 
-          Get-ChildItem "src-tauri\target\release\bundle" -Recurse -Include "*.exe","*.msi" |
-            ForEach-Object {
-              & $signtool sign /f "$env:PFX_PATH" /fd sha256 /tr http://timestamp.digicert.com /td sha256 "$($_.FullName)"
-              Write-Host "Signed: $($_.FullName)"
+      - name: Sign installers via Azure Key Vault
+        run: |
+          $bundles = Get-ChildItem "src-tauri\target\release\bundle" `
+            -Recurse -Include "*.exe", "*.msi" |
+            # Exclude the Tauri updater stub (already handled by minisign)
+            Where-Object { $_.Name -notlike "*updater*" }
+
+          if (-not $bundles) {
+            Write-Error "No installer files found to sign!"
+            exit 1
+          }
+
+          foreach ($file in $bundles) {
+            Write-Host "Signing: $($file.FullName)"
+            AzureSignTool sign `
+              --azure-key-vault-url      "${{ secrets.AZURE_KEY_VAULT_URI }}" `
+              --azure-key-vault-tenant-id  "${{ secrets.AZURE_TENANT_ID }}" `
+              --azure-key-vault-client-id  "${{ secrets.AZURE_CLIENT_ID }}" `
+              --azure-key-vault-client-secret "${{ secrets.AZURE_CLIENT_SECRET }}" `
+              --azure-key-vault-certificate "${{ secrets.AZURE_CERT_NAME }}" `
+              --timestamp-rfc3161        "http://timestamp.digicert.com" `
+              --file-digest              sha256 `
+              --timestamp-digest         sha256 `
+              "$($file.FullName)"
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Signing FAILED for $($file.Name) (exit code $LASTEXITCODE)"
+              exit $LASTEXITCODE
             }
+            Write-Host "OK: $($file.Name)"
+          }
+        shell: pwsh
+
+      # Re-upload signed files over the unsigned draft assets, then publish.
+      - name: Upload signed installers and publish release
+        run: |
+          $tag = "${{ github.ref_name }}"
+
+          Get-ChildItem "src-tauri\target\release\bundle" `
+            -Recurse -Include "*.exe", "*.msi" |
+            Where-Object { $_.Name -notlike "*updater*" } |
+            ForEach-Object {
+              Write-Host "Uploading signed: $($_.Name)"
+              gh release upload $tag "$($_.FullName)" --clobber
+            }
+
+          # Promote draft → published so users can download
+          gh release edit $tag --draft=false
+          Write-Host "Release $tag published successfully."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
