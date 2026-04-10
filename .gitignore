@@ -55,9 +55,6 @@ yarn-error.log*
 Thumbs.db
 .env.example
 
-# Sound effects (large binary files)
-src/data/Sound Effects/
-
 # Developer Personal Files
 backups/
 docs/
