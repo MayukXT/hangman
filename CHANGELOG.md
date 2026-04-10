@@ -6,10 +6,11 @@ All notable changes to HANGMAN will be documented in this file.
 
 ## Versioning & Release Rules
 
-### Version Format: `vX.Y`
-- **X**: Major version (1-∞) — Breaking changes, major features, architectural shifts.
-- **Y**: Minor version (1-∞) — Bug fixes, small feature additions, refinements.
-- Example: `v1.0` → `v1.1` (bug fix) → `v2.0` (major feature/redesign) → `v2.1` (refinement).
+### Version Format: `vX.Y.Z`
+- **X**: Major version — Breaking changes, major redesigns, architectural shifts.
+- **Y**: Minor version — New features, gameplay additions, UI changes.
+- **Z**: Patch version — Bug fixes, small tweaks, dependency updates.
+- Example: `v1.0.0` → `v1.0.1` (bug fix) → `v1.1.0` (new feature) → `v2.0.0` (major redesign).
 
 ### Developer Checklist (Before Every Release)
 - **[ ] Update `APP_VERSION`** in `src/utils/gameConstants.ts` to match the new tag.
@@ -17,13 +18,13 @@ All notable changes to HANGMAN will be documented in this file.
 - **[ ] Update this CHANGELOG.md** with a new version section listing all changes.
 - **[ ] Update `README.md`** if features, setup, or user-facing behavior changed.
 - **[ ] Update `docs/Notes.md`** if dev patterns, architecture, or gotchas were discovered.
-- **[ ] Create a git tag** (e.g., `git tag v2.2`) and push.
+- **[ ] Create a git tag** (e.g., `git tag v2.2.0`) and push.
 - **[ ] Build release artifacts**: Run the full build pipeline and generate `.exe` (Windows), `.msi` (Windows installer), and `.apk` (Android — when ready).
 - **[ ] Upload builds** to GitHub Releases or your distribution channel.
 
 ---
 
-## [v2.2] - 2026-04-10
+## [v2.2.0] - 2026-04-10
 
 ### Added
 - **Automatic OTA Updates**: In-app update checker using Tauri Updater Plugin. App silently checks GitHub Releases on launch, shows an update card in the menu and About screen, and installs updates with a progress bar — no manual download needed.
@@ -48,7 +49,7 @@ All notable changes to HANGMAN will be documented in this file.
 
 ---
 
-## [v2.1] - 2026-04-09
+## [v2.1.0] - 2026-04-09
 
 ### Fixed
 - **Wave Accent Keyboard Borders**: Fixed bug where keyboard key borders remained permanently glowing after being typed. Animation cleanup now properly removes `.animate-wave-bump` class after each wave cascade completes.
@@ -65,7 +66,7 @@ All notable changes to HANGMAN will be documented in this file.
 
 ---
 
-## [v2.0] - 2026-04-08
+## [v2.0.0] - 2026-04-08
 
 ### Added
 - **Cinematic Intro Sequence**: New 10-second unskippable "A VISUAL MASTERPIECE" intro with framer-motion animations. Text flies in from off-screen, scales dynamically, and features a glitchy "BY MAYUK" broadcast banner.
@@ -78,7 +79,7 @@ All notable changes to HANGMAN will be documented in this file.
 
 ---
 
-## [v1.0] - 2026-04-01
+## [v1.0.0] - 2026-04-01
 
 ### Added
 - **Core Hangman Gameplay**: Basic word-guessing loop with keyboard input.
