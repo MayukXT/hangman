@@ -112,12 +112,9 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
                 <h2 className="font-['Orbitron'] text-3xl font-black tracking-widest text-slate-100">MAYUK</h2>
               </div>
               
-              <a 
-                href="https://github.com/MayukXT" 
-                target="_blank" 
-                rel="noreopener noreferrer"
-                onClick={(e) => handleExternalLink(e, "https://github.com/MayukXT")}
-                className="flex items-center gap-2 font-['VT323'] text-2xl tracking-wider transition-all hover:-translate-y-0.5 group w-fit"
+              <button 
+                onClick={(e) => handleExternalLink(e as any, "https://github.com/MayukXT")}
+                className="flex items-center gap-2 font-['VT323'] text-2xl tracking-wider transition-all hover:-translate-y-0.5 group w-fit cursor-pointer"
                 style={{ 
                   color: accentColor, 
                   textShadow: `0 0 10px ${accentColor}80, 0 0 20px ${accentColor}40` 
@@ -129,24 +126,21 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
                   style={{ filter: `drop-shadow(0 0 8px ${accentColor}80)` }} 
                 />
                 @MayukXT
-              </a>
+              </button>
             </div>
           </div>
           
           <div className="flex flex-col gap-4 mb-10">
-            <a 
-              href="https://github.com/MayukXT/hangman" 
-              target="_blank" 
-              rel="noreopener noreferrer"
-              onClick={(e) => handleExternalLink(e, "https://github.com/MayukXT/hangman")}
-              className="flex items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 rounded-xl border border-slate-700 hover:border-slate-500 transition-all font-['Orbitron'] group"
+            <button 
+              onClick={(e) => handleExternalLink(e as any, "https://github.com/MayukXT/hangman")}
+              className="flex w-full items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 rounded-xl border border-slate-700 hover:border-slate-500 transition-all font-['Orbitron'] group cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <ExternalLink size={20} className="text-slate-400 group-hover:text-white transition-colors" />
                 <span className="font-bold tracking-wider text-slate-300 group-hover:text-white transition-colors">Open Source Repository</span>
               </div>
               <span className="text-xs text-slate-500 font-bold group-hover:text-slate-400">View Code</span>
-            </a>
+            </button>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 flex flex-col gap-1">
@@ -343,7 +337,7 @@ export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearDa
             className="w-full text-left px-5 py-4 hover:bg-slate-800 text-slate-300 transition-colors font-['Orbitron'] border-t border-slate-800 flex items-center gap-3 text-sm"
           >
             <Info size={18} className={themeTokens.text} />
-            <span className="font-bold tracking-wider">ABOUT OPTIONS</span>
+            <span className="font-bold tracking-wider">ABOUT</span>
           </button>
 
           {!isNameEntryActive && (
