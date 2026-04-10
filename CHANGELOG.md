@@ -26,6 +26,11 @@ All notable changes to HANGMAN will be documented in this file.
 
 ## [v2.3.0] - 2026-04-10
 
+### Fixed
+- **Executable Links**: Fixed an issue in the desktop build where external links to GitHub profiles and repositories were unresponsive. Implemented Tauri's shell plugin to securely open URLs in the native OS browser.
+- **Title Animation**: Adjusted the pacing of the "Hangman" intro zoom-out effect by extending the static phase readability and introducing a steady, firm vibration lock effect.
+- **Documentation**: Scrubbed auto-generated development references from project metadata.
+
 ### Changed
 - **Versioning**: Switched to semantic versioning (`vX.Y.Z` — major.features.fixes).
 - **Signed Releases**: Added GitHub Actions workflow for automated builds and code signing.

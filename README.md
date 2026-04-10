@@ -6,7 +6,7 @@
 ![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-orange?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows-informational?style=flat-square)
 
-**A retro-futuristic arcade Hangman experience built with React, TypeScript, Tailwind CSS, and Vite.**
+**A retro-futuristic arcade Hangman experience built with React, TypeScript, Tailwind CSS, Tauri, and Vite.**
 
 > **📚 Documentation** — [Changelog](CHANGELOG.md) • [License](LICENSE) • [GitHub](https://github.com/MayukXT/hangman)
 

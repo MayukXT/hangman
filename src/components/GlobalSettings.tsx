@@ -106,6 +106,7 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
                 href="https://github.com/MayukXT" 
                 target="_blank" 
                 rel="noreopener noreferrer"
+                onClick={(e) => handleExternalLink(e, "https://github.com/MayukXT")}
                 className="flex items-center gap-2 font-['VT323'] text-2xl tracking-wider transition-all hover:-translate-y-0.5 group w-fit"
                 style={{ 
                   color: accentColor, 
@@ -127,6 +128,7 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
               href="https://github.com/MayukXT/hangman" 
               target="_blank" 
               rel="noreopener noreferrer"
+              onClick={(e) => handleExternalLink(e, "https://github.com/MayukXT/hangman")}
               className="flex items-center justify-between p-4 bg-slate-800/50 hover:bg-slate-800 rounded-xl border border-slate-700 hover:border-slate-500 transition-all font-['Orbitron'] group"
             >
               <div className="flex items-center gap-3">

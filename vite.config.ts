@@ -35,9 +35,10 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ["react", "react-dom"],
-          motion: ["framer-motion"],
+        manualChunks(id) {
+          if (id.includes('src/data/words')) return 'words-data';
+          if (id.includes('framer-motion')) return 'motion';
+          if (id.includes('node_modules/react')) return 'vendor';
         },
       },
     },

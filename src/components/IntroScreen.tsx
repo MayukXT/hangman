@@ -225,16 +225,25 @@ export const IntroScreen = ({ onComplete }: IntroScreenProps) => {
           <motion.div
             key="hangman-text"
             initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: [0.5, 1.1, 15], opacity: [0, 1, 0] }}
+            animate={{ scale: [0.5, 1.1, 1.1, 15], opacity: [0, 1, 1, 0] }}
             transition={{
               duration: 4.3,
-              times: [0, 0.15, 1],
-              ease: ['easeOut', 'easeIn']
+              times: [0, 0.15, 0.266, 1], // Deducted 0.5s from the 3.655s zoom and added to static phase
+              ease: ['easeOut', 'linear', 'easeIn']
             }}
             className="absolute font-['Press_Start_2P'] text-[8vw] font-bold tracking-widest text-[#e2e8f0] whitespace-nowrap"
             style={{ textShadow: '0 0 20px rgba(139,92,246,0.8), 0 0 60px rgba(34,211,238,0.9)', willChange: 'transform, opacity' }}
           >
-            HANGMAN
+            <motion.div
+              initial={{ x: 0, y: 0 }}
+              animate={{ 
+                x: [0, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, 0], 
+                y: [0, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 0] 
+              }}
+              transition={{ duration: 0.5, delay: 0.645, ease: 'linear' }}
+            >
+              HANGMAN
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
