@@ -53,6 +53,16 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
       onUpdateFound(result);
     }
   };
+
+  const handleExternalLink = async (e: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+    e.preventDefault();
+    if (typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__) {
+      const { open } = await import('@tauri-apps/plugin-shell');
+      open(url).catch(err => console.error('Failed to open URL:', err));
+    } else {
+      window.open(url, '_blank');
+    }
+  };
   
   useEffect(() => {
     if (isOpen) {
