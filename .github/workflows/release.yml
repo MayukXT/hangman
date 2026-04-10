@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Decode and install certificate
+        run: |
+          $bytes = [Convert]::FromBase64String("${{ secrets.CERT_PFXDATA }}")
+          $pfxPath = "$env:RUNNER_TEMP\cert.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, $bytes)
+          Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My
+          $thumb = (Get-PfxCertificate -FilePath $pfxPath).Thumbprint
+          echo "CERT_THUMBPRINT=$thumb" >> $env:GITHUB_ENV
+        shell: pwsh
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Hangman Game ${{ github.ref_name }}'
+          releaseBody: 'See CHANGELOG.md for what changed in this release.'
+          releaseDraft: false
+          prerelease: false
+
+      - name: Sign installers
+        run: |
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter "signtool.exe" |
+            Where-Object { $_.FullName -match "x64" } |
+            Select-Object -Last 1 -ExpandProperty FullName
+
+          Get-ChildItem "src-tauri\target\release\bundle" -Recurse -Include "*.exe","*.msi" |
+            ForEach-Object {
+              & $signtool sign /sha1 "$env:CERT_THUMBPRINT" /td sha256 /fd sha256 /tr http://timestamp.digicert.com "$($_.FullName)"
+              Write-Host "Signed: $($_.FullName)"
+            }
+        shell: pwsh
