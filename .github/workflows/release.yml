@@ -30,14 +30,12 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
-      - name: Decode and install certificate
+      - name: Decode certificate
         run: |
           $bytes = [Convert]::FromBase64String("${{ secrets.CERT_PFXDATA }}")
           $pfxPath = "$env:RUNNER_TEMP\cert.pfx"
           [IO.File]::WriteAllBytes($pfxPath, $bytes)
-          Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Exportable
-          $thumb = (Get-PfxCertificate -FilePath $pfxPath).Thumbprint
-          echo "CERT_THUMBPRINT=$thumb" >> $env:GITHUB_ENV
+          echo "PFX_PATH=$pfxPath" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Build Tauri app
@@ -61,7 +59,7 @@ jobs:
 
           Get-ChildItem "src-tauri\target\release\bundle" -Recurse -Include "*.exe","*.msi" |
             ForEach-Object {
-              & $signtool sign /sha1 "$env:CERT_THUMBPRINT" /td sha256 /fd sha256 /tr http://timestamp.digicert.com "$($_.FullName)"
+              & $signtool sign /f "$env:PFX_PATH" /fd sha256 /tr http://timestamp.digicert.com /td sha256 "$($_.FullName)"
               Write-Host "Signed: $($_.FullName)"
             }
         shell: pwsh
