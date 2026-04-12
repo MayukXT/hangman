@@ -1,6 +1,6 @@
 {
-  "version": "v2.2",
+  "version": "v2.3.2",
   "download_url": "https://github.com/MayukXT/hangman/releases/latest",
-  "changelog": "Latest stable release",
-  "release_date": "2026-04-10"
+  "changelog": "Fixed the updater issue",
+  "release_date": "2026-04-12"
 }
