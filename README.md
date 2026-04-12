@@ -1,7 +1,7 @@
 # HANGMAN: A Visual Masterpiece
 
 ![HANGMAN](https://img.shields.io/badge/Made%20by-Mayuk-blueviolet?style=flat-square)
-![Version](https://img.shields.io/badge/version-2.3.0-brightgreen?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.3.2-brightgreen?style=flat-square)
 ![Status](https://img.shields.io/badge/status-stable-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-CC%20BY--NC%204.0-orange?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Windows-informational?style=flat-square)
