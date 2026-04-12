@@ -141,7 +141,14 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
       setStage('done');
       // On Windows the app exits automatically before reaching here
     } catch (e) {
-      setErrorMsg(e instanceof Error ? e.message : 'Update failed. Please try again later.');
+      // Show the raw error from Tauri so it's easy to diagnose what went wrong
+      const raw =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'string'
+            ? e
+            : JSON.stringify(e, null, 2);
+      setErrorMsg(raw || 'Unknown error — check the console for details.');
       setStage('error');
     }
   };

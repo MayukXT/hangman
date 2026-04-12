@@ -30,10 +30,14 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
-      # ── Tauri updater signing (minisign) ──────────────────────────────────
-      # TAURI_SIGNING_PRIVATE_KEY + TAURI_SIGNING_PRIVATE_KEY_PASSWORD sign
-      # the .sig files used by the auto-updater. This is separate from the
-      # Windows code-signing certificate step below.
+      # ── Step 1: Build + initial minisign ─────────────────────────────────
+      # tauri-action builds the app, signs each binary with the minisign key,
+      # embeds those signatures into latest.json, and uploads everything to a
+      # draft GitHub release.
+      #
+      # IMPORTANT: After this step the binaries are UNSIGNED (no Authenticode).
+      # AzureSignTool in Step 2 will change the binary bytes, so the minisign
+      # signatures in latest.json will no longer match. Step 3 fixes this.
       # ─────────────────────────────────────────────────────────────────────
       - name: Build Tauri app (draft release)
         uses: tauri-apps/tauri-action@v0
@@ -45,23 +49,12 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Hangman Game ${{ github.ref_name }}'
           releaseBody: 'See CHANGELOG.md for what changed in this release.'
-          # Keep as draft so we can replace unsigned files with signed ones
-          # before publishing to users.
           releaseDraft: true
           prerelease: false
 
-      # ── Windows code-signing via Azure Key Vault ──────────────────────────
-      # AzureSignTool fetches your private key directly from Azure Key Vault,
-      # so the key never needs to leave Azure. The .pfx (CERT_PFXDATA) is no
-      # longer needed here; signing is done entirely through the Key Vault API.
-      #
-      # Required GitHub Secrets:
-      #   AZURE_KEY_VAULT_URI    - e.g. https://myvault.vault.azure.net
-      #   AZURE_TENANT_ID        - Azure Active Directory Tenant ID
-      #   AZURE_CLIENT_ID        - App Registration (Service Principal) client ID
-      #   AZURE_CLIENT_SECRET    - App Registration client secret
-      #   AZURE_CERT_NAME        - Name of the certificate in Key Vault
-      #                            (e.g. "HangmanSignCertificate")
+      # ── Step 2: Authenticode signing via Azure Key Vault ─────────────────
+      # This changes the binary bytes, which INVALIDATES the minisign sigs
+      # that tauri-action just embedded in latest.json. Step 3 will repair it.
       # ─────────────────────────────────────────────────────────────────────
       - name: Install AzureSignTool
         run: dotnet tool install --global AzureSignTool
@@ -71,7 +64,6 @@ jobs:
         run: |
           $bundles = Get-ChildItem "src-tauri\target\release\bundle" `
             -Recurse -Include "*.exe", "*.msi" |
-            # Exclude the Tauri updater stub (already handled by minisign)
             Where-Object { $_.Name -notlike "*updater*" }
 
           if (-not $bundles) {
@@ -82,14 +74,14 @@ jobs:
           foreach ($file in $bundles) {
             Write-Host "Signing: $($file.FullName)"
             AzureSignTool sign `
-              --azure-key-vault-url      "${{ secrets.AZURE_KEY_VAULT_URI }}" `
-              --azure-key-vault-tenant-id  "${{ secrets.AZURE_TENANT_ID }}" `
-              --azure-key-vault-client-id  "${{ secrets.AZURE_CLIENT_ID }}" `
+              --azure-key-vault-url           "${{ secrets.AZURE_KEY_VAULT_URI }}" `
+              --azure-key-vault-tenant-id     "${{ secrets.AZURE_TENANT_ID }}" `
+              --azure-key-vault-client-id     "${{ secrets.AZURE_CLIENT_ID }}" `
               --azure-key-vault-client-secret "${{ secrets.AZURE_CLIENT_SECRET }}" `
-              --azure-key-vault-certificate "${{ secrets.AZURE_CERT_NAME }}" `
-              --timestamp-rfc3161        "http://timestamp.digicert.com" `
-              --file-digest              sha256 `
-              --timestamp-digest         sha256 `
+              --azure-key-vault-certificate   "${{ secrets.AZURE_CERT_NAME }}" `
+              --timestamp-rfc3161             "http://timestamp.digicert.com" `
+              --file-digest                   sha256 `
+              --timestamp-digest              sha256 `
               "$($file.FullName)"
 
             if ($LASTEXITCODE -ne 0) {
@@ -100,68 +92,99 @@ jobs:
           }
         shell: pwsh
 
-      # ── Regenerate minisign .sig files after Azure code-signing ──────────
-      # CRITICAL: tauri-action generated .sig files against the *original*
-      # (unsigned) binaries. Azure re-signs each binary, changing its bytes.
-      # The old .sig files no longer match → Tauri's updater rejects them
-      # with "Update failed". We must regenerate .sig for every binary that
-      # was code-signed so the updater can verify the correct file.
+      # ── Step 3: Re-sign + patch latest.json ──────────────────────────────
+      # After Azure re-signing the binaries have different bytes. We must:
+      #   a) Regenerate each .sig file against the new binary bytes
+      #   b) Download latest.json from the draft release
+      #   c) Patch the "signature" field for each platform key with the new sig
+      #   d) Re-upload latest.json so the Tauri updater can verify correctly
+      #
+      # The Tauri updater reads the "signature" value from latest.json and
+      # verifies it against the downloaded binary. The .sig files on the release
+      # page are NOT read by the updater — only latest.json matters.
       # ─────────────────────────────────────────────────────────────────────
-      - name: Regenerate .sig files for Azure-signed binaries
+      - name: Regenerate signatures and patch latest.json
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $bundles = Get-ChildItem "src-tauri\target\release\bundle" `
-            -Recurse -Include "*.exe", "*.msi" |
+          $tag = "${{ github.ref_name }}"
+          $bundleDir = "src-tauri\target\release\bundle"
+
+          # Map from filename patterns to the platform key inside latest.json
+          $platformMap = @{
+            "*_x64-setup.exe"    = @("windows-x86_64-nsis")
+            "*_x64_en-US.msi"   = @("windows-x86_64", "windows-x86_64-msi")
+          }
+
+          # Collect all files we need to process (same filter as signing step)
+          $bundles = Get-ChildItem $bundleDir -Recurse -Include "*.exe","*.msi" |
             Where-Object { $_.Name -notlike "*updater*" }
 
-          foreach ($file in $bundles) {
-            Write-Host "Regenerating .sig for: $($file.Name)"
-            npx --yes @tauri-apps/cli signer sign "$($file.FullName)"
+          # Download the latest.json that tauri-action uploaded to the draft
+          gh release download $tag --pattern "latest.json" --dir "." --clobber
+          $latestJson = Get-Content "latest.json" -Raw | ConvertFrom-Json
 
+          foreach ($file in $bundles) {
+            Write-Host "--- Processing: $($file.Name)"
+
+            # a) Regenerate .sig for the Azure-signed binary
+            npx --yes @tauri-apps/cli signer sign "$($file.FullName)"
             if ($LASTEXITCODE -ne 0) {
-              Write-Error ".sig generation FAILED for $($file.Name)"
+              Write-Error ".sig generation failed for $($file.Name)"
               exit $LASTEXITCODE
             }
 
-            $sigPath = "$($file.FullName).sig"
-            if (-not (Test-Path $sigPath)) {
-              Write-Error "Expected .sig not found at: $sigPath"
+            $sigFile = "$($file.FullName).sig"
+            if (-not (Test-Path $sigFile)) {
+              Write-Error "Expected .sig not found: $sigFile"
               exit 1
             }
-            Write-Host "OK: $($file.Name).sig"
+
+            # b) Read the new .sig content
+            $newSig = Get-Content $sigFile -Raw
+
+            # c) Find which platform key(s) this file maps to and patch them
+            $matched = $false
+            foreach ($pattern in $platformMap.Keys) {
+              if ($file.Name -like $pattern) {
+                foreach ($platformKey in $platformMap[$pattern]) {
+                  if ($latestJson.platforms.$platformKey) {
+                    $latestJson.platforms.$platformKey.signature = $newSig
+                    Write-Host "Patched latest.json[$platformKey].signature"
+                    $matched = $true
+                  }
+                }
+              }
+            }
+            if (-not $matched) {
+              Write-Warning "No platform key matched for: $($file.Name) — skipping"
+            }
           }
+
+          # d) Write patched latest.json and re-upload it
+          $latestJson | ConvertTo-Json -Depth 10 | Set-Content "latest.json" -Encoding UTF8
+          Write-Host "Uploading patched latest.json..."
+          gh release upload $tag "latest.json" --clobber
+          Write-Host "latest.json patched and uploaded."
         shell: pwsh
 
-      # Re-upload Azure-signed binaries AND the freshly-generated .sig files
-      # over the unsigned draft assets, then publish the release.
+      # ── Step 4: Upload Azure-signed binaries and publish ─────────────────
       - name: Upload signed installers and publish release
         run: |
           $tag = "${{ github.ref_name }}"
 
-          # Upload new binaries (.exe and .msi) — overwrite the unsigned ones
           Get-ChildItem "src-tauri\target\release\bundle" `
             -Recurse -Include "*.exe", "*.msi" |
             Where-Object { $_.Name -notlike "*updater*" } |
             ForEach-Object {
-              Write-Host "Uploading signed binary: $($_.Name)"
+              Write-Host "Uploading: $($_.Name)"
               gh release upload $tag "$($_.FullName)" --clobber
             }
 
-          # Upload fresh .sig files — overwrite the old ones that matched the
-          # pre-Azure-signing bytes (they would cause "Update failed").
-          Get-ChildItem "src-tauri\target\release\bundle" `
-            -Recurse -Include "*.exe.sig", "*.msi.sig" |
-            Where-Object { $_.Name -notlike "*updater*" } |
-            ForEach-Object {
-              Write-Host "Uploading fresh .sig: $($_.Name)"
-              gh release upload $tag "$($_.FullName)" --clobber
-            }
-
-          # Promote draft → published so users can download
           gh release edit $tag --draft=false
-          Write-Host "Release $tag published successfully."
+          Write-Host "Release $tag published."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
