@@ -100,16 +100,62 @@ jobs:
           }
         shell: pwsh
 
-      # Re-upload signed files over the unsigned draft assets, then publish.
+      # ── Regenerate minisign .sig files after Azure code-signing ──────────
+      # CRITICAL: tauri-action generated .sig files against the *original*
+      # (unsigned) binaries. Azure re-signs each binary, changing its bytes.
+      # The old .sig files no longer match → Tauri's updater rejects them
+      # with "Update failed". We must regenerate .sig for every binary that
+      # was code-signed so the updater can verify the correct file.
+      # ─────────────────────────────────────────────────────────────────────
+      - name: Regenerate .sig files for Azure-signed binaries
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $bundles = Get-ChildItem "src-tauri\target\release\bundle" `
+            -Recurse -Include "*.exe", "*.msi" |
+            Where-Object { $_.Name -notlike "*updater*" }
+
+          foreach ($file in $bundles) {
+            Write-Host "Regenerating .sig for: $($file.Name)"
+            npx --yes @tauri-apps/cli signer sign "$($file.FullName)"
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error ".sig generation FAILED for $($file.Name)"
+              exit $LASTEXITCODE
+            }
+
+            $sigPath = "$($file.FullName).sig"
+            if (-not (Test-Path $sigPath)) {
+              Write-Error "Expected .sig not found at: $sigPath"
+              exit 1
+            }
+            Write-Host "OK: $($file.Name).sig"
+          }
+        shell: pwsh
+
+      # Re-upload Azure-signed binaries AND the freshly-generated .sig files
+      # over the unsigned draft assets, then publish the release.
       - name: Upload signed installers and publish release
         run: |
           $tag = "${{ github.ref_name }}"
 
+          # Upload new binaries (.exe and .msi) — overwrite the unsigned ones
           Get-ChildItem "src-tauri\target\release\bundle" `
             -Recurse -Include "*.exe", "*.msi" |
             Where-Object { $_.Name -notlike "*updater*" } |
             ForEach-Object {
-              Write-Host "Uploading signed: $($_.Name)"
+              Write-Host "Uploading signed binary: $($_.Name)"
+              gh release upload $tag "$($_.FullName)" --clobber
+            }
+
+          # Upload fresh .sig files — overwrite the old ones that matched the
+          # pre-Azure-signing bytes (they would cause "Update failed").
+          Get-ChildItem "src-tauri\target\release\bundle" `
+            -Recurse -Include "*.exe.sig", "*.msi.sig" |
+            Where-Object { $_.Name -notlike "*updater*" } |
+            ForEach-Object {
+              Write-Host "Uploading fresh .sig: $($_.Name)"
               gh release upload $tag "$($_.FullName)" --clobber
             }
 

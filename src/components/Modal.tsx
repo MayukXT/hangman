@@ -1,7 +1,7 @@
-import { AlertTriangle, X, Download, CheckCircle, XCircle } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { AlertTriangle, X, Download, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
 import { useOnClickOutside } from '../hooks/useOnClickOutside';
-import { downloadAndInstallUpdate, isTauriApp, type UpdateProgress } from '../utils/updater';
+import { downloadAndInstallUpdate, isTauriApp, getInstallType, type UpdateProgress, type InstallType } from '../utils/updater';
 
 import type { ReactNode } from 'react';
 
@@ -100,17 +100,33 @@ interface UpdateWarningModalProps {
   version: string;
 }
 
+// GitHub releases page — always points to the latest release
+const RELEASES_URL = 'https://github.com/MayukXT/hangman/releases/latest';
+
 export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: UpdateWarningModalProps) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<'info' | 'downloading' | 'done' | 'error'>('info');
   const [progress, setProgress] = useState<UpdateProgress>({ downloaded: 0, total: 0 });
   const [errorMsg, setErrorMsg] = useState('');
+  // Detect install type so we can give portable users the right guidance
+  const [installType, setInstallType] = useState<InstallType>('unknown');
 
   useOnClickOutside(modalRef, () => { if (stage === 'info' || stage === 'error') onClose(); });
+
+  // Check install type whenever the modal opens, reset state on close
+  useEffect(() => {
+    if (isOpen) {
+      setStage('info');
+      setProgress({ downloaded: 0, total: 0 });
+      setErrorMsg('');
+      getInstallType().then(setInstallType);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const canAutoUpdate = isTauriApp();
+  const isPortable = installType === 'portable';
   const progressPercent = progress.total > 0 ? Math.round((progress.downloaded / progress.total) * 100) : 0;
 
   const handleInstall = async () => {
@@ -130,6 +146,21 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
     }
   };
 
+  // Opens the GitHub releases page via the Tauri shell plugin (or window.open in dev)
+  const handlePortableDownload = async () => {
+    try {
+      if (isTauriApp()) {
+        const { open } = await import('@tauri-apps/plugin-shell');
+        await open(RELEASES_URL);
+      } else {
+        window.open(RELEASES_URL, '_blank', 'noopener,noreferrer');
+      }
+    } catch {
+      // Last resort fallback
+      window.open(RELEASES_URL, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/85 backdrop-blur-md px-4">
       <div ref={modalRef} className="max-w-lg w-full bg-slate-900 border-2 border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.3)] rounded-2xl p-6 animate-in zoom-in-95 duration-200">
@@ -140,7 +171,7 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
              stage === 'error' ? <XCircle size={28} className="text-rose-500" /> :
              <AlertTriangle size={28} />}
             <h2 className="font-['Orbitron'] font-black text-lg tracking-widest">
-              {stage === 'info' ? 'BEFORE YOU UPDATE' : 
+              {stage === 'info' ? (isPortable ? 'PORTABLE VERSION' : 'BEFORE YOU UPDATE') : 
                stage === 'downloading' ? 'UPDATING...' : 
                stage === 'done' ? 'UPDATE COMPLETE' : 
                'UPDATE FAILED'}
@@ -153,7 +184,60 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
           )}
         </div>
 
-        {stage === 'info' && (
+        {/* ── Portable EXE notice ─────────────────────────────────────── */}
+        {stage === 'info' && isPortable && (
+          <>
+            <div className="space-y-4 text-sm font-['JetBrains_Mono'] mb-6">
+              {/* Portable badge */}
+              <div className="p-4 bg-amber-950/40 rounded-xl border border-amber-600/60">
+                <p className="text-amber-400 font-bold mb-2 text-base">📦 You're running the Portable EXE</p>
+                <p className="text-slate-300 leading-relaxed">
+                  The in-app auto-updater only works with the <span className="text-white font-bold">NSIS installer</span> edition.
+                  Portable builds are self-contained and cannot be updated silently — a new EXE must be downloaded manually.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
+                <p className="text-cyan-400 font-bold mb-1">📥 How to update</p>
+                <p className="text-slate-300 leading-relaxed">
+                  Click the button below to open the GitHub Releases page. Download the new{' '}
+                  <span className="text-white font-bold">portable EXE</span> and replace your current file — no installation needed.
+                </p>
+              </div>
+
+              <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
+                <p className="text-emerald-400 font-bold mb-1">💾 Your Data is Safe</p>
+                <p className="text-slate-300 leading-relaxed">
+                  Your scores, username, and settings are stored separately and will{' '}
+                  <strong className="text-white">persist automatically</strong>. Just swap the EXE file.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-slate-500 text-xs font-['JetBrains_Mono'] mb-6">
+              New version available: <span className="text-slate-300">{version}</span>
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg font-['Orbitron'] text-slate-300 hover:text-white border border-slate-700 hover:bg-slate-800 transition-colors"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handlePortableDownload}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg font-['Orbitron'] font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] border border-amber-400 transition-all"
+              >
+                <ExternalLink size={16} />
+                DOWNLOAD {version}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Normal installer (NSIS / MSI) update flow ───────────────── */}
+        {stage === 'info' && !isPortable && (
           <>
             <div className="space-y-4 text-sm font-['JetBrains_Mono'] mb-6">
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
@@ -172,7 +256,7 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
               </div>
 
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
-                <p className="text-violet-400 font-bold mb-1">🔐 Verified & Signed</p>
+                <p className="text-violet-400 font-bold mb-1">🔐 Verified &amp; Signed</p>
                 <p className="text-slate-300 leading-relaxed">Updates are cryptographically signed. The app verifies the signature before installing — no tampered files can get through.</p>
               </div>
             </div>

@@ -5,6 +5,9 @@ export interface UpdateInfo {
   changelog: string;
 }
 
+// How the app was installed — used to show the right update UI
+export type InstallType = 'installed' | 'portable' | 'unknown';
+
 export interface UpdateProgress {
   downloaded: number;
   total: number;
@@ -117,4 +120,19 @@ async function checkForUpdateFallback(): Promise<UpdateInfo | null> {
 // are we running as a real desktop app or just in the browser?
 export function isTauriApp(): boolean {
   return '__TAURI_INTERNALS__' in window;
+}
+
+// Determines whether this is an NSIS/MSI installed app or a portable EXE.
+// Returns 'unknown' in browser/dev mode or if the check fails — callers
+// should treat 'unknown' the same as 'installed' (don't block the update).
+export async function getInstallType(): Promise<InstallType> {
+  try {
+    if (!isTauriApp()) return 'unknown';
+    const { invoke } = await import('@tauri-apps/api/core');
+    const result = await invoke<string>('get_install_type');
+    if (result === 'installed' || result === 'portable') return result;
+    return 'unknown';
+  } catch {
+    return 'unknown'; // fail-safe: never block a real update
+  }
 }
