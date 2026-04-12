@@ -1,13 +1,17 @@
-/// Detects whether the app is running as a properly-installed binary
-/// (via NSIS or MSI) or as a standalone portable EXE.
+/// Detects whether the app is running from a proper installation or as a
+/// standalone portable EXE. This drives the update UI in the frontend so
+/// portable users are redirected to download rather than trying to auto-update.
 ///
-/// On Windows, Tauri's NSIS installer places the app in:
-///   %LOCALAPPDATA%\Programs\<AppName>   (user-level install)
-///   C:\Program Files\<AppName>           (system-level install)
+/// Detection strategy (Windows):
+///   1. NSIS installers always drop an "Uninstall *.exe" file right next to
+///      the app binary in the installation directory — we look for that first.
+///   2. MSI installers place the app under Program Files and register it with
+///      Windows Installer — we fall back to a path check for those.
+///   3. Anything that matches neither is treated as portable.
 ///
-/// A portable EXE is run from any other path (Desktop, USB, Downloads…).
-/// We return "portable" in that case so the frontend can redirect the user
-/// to download a new portable manually instead of running the NSIS installer.
+/// On non-Windows platforms (Linux, Android, etc.) we always return "installed"
+/// because those platforms do not have a portable-EXE concept and the in-app
+/// updater or the platform store handles updates natively.
 #[tauri::command]
 fn get_install_type() -> String {
   #[cfg(target_os = "windows")]
@@ -16,20 +20,39 @@ fn get_install_type() -> String {
       Ok(p) => p,
       Err(_) => return "unknown".to_string(),
     };
-    let exe_lower = exe.to_string_lossy().to_lowercase();
 
-    let is_installed = exe_lower.contains("\\appdata\\local\\programs\\")
-      || exe_lower.contains("\\program files\\")
-      || exe_lower.contains("\\program files (x86)\\");
+    // ── NSIS check ────────────────────────────────────────────────────────
+    // Tauri names the NSIS uninstaller "Uninstall {productName}.exe".
+    // Scanning the sibling files is more reliable than any path heuristic
+    // because the user can choose any install directory during setup.
+    if let Some(dir) = exe.parent() {
+      let has_nsis_uninstaller = std::fs::read_dir(dir)
+        .map(|entries| {
+          entries.filter_map(|e| e.ok()).any(|entry| {
+            let name = entry.file_name().to_string_lossy().to_lowercase();
+            name.starts_with("uninstall") && name.ends_with(".exe")
+          })
+        })
+        .unwrap_or(false);
 
-    if is_installed {
-      "installed".to_string()
-    } else {
-      "portable".to_string()
+      if has_nsis_uninstaller {
+        return "installed".to_string();
+      }
     }
+
+    // ── MSI / system-wide check ───────────────────────────────────────────
+    // MSI always installs to Program Files (no local uninstaller next to exe).
+    let exe_lower = exe.to_string_lossy().to_lowercase();
+    if exe_lower.contains("\\program files\\")
+      || exe_lower.contains("\\program files (x86)\\")
+    {
+      return "installed".to_string();
+    }
+
+    // Nothing matched — treat as portable
+    "portable".to_string()
   }
 
-  // On macOS / Linux there's no portable concept, treat as installed
   #[cfg(not(target_os = "windows"))]
   "installed".to_string()
 }
