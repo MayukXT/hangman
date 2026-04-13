@@ -42,7 +42,7 @@
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started (With Source Code)
 
 ### Prerequisites
 - **Node.js** 18+ ([Download](https://nodejs.org))
@@ -112,6 +112,8 @@ Words are thematically organized:
 - **MOVIES**: cinema, filmmaking, famous films
 - **HISTORY**: historical events, figures, eras
 - **COLORS**: color theory, visual perception
+
+And much more...
 
 New themes can easily be added to [src/data/words.ts](src/data/words.ts).
 
@@ -199,14 +201,6 @@ hangman/
 ### Reset
 - **Change Username**: Modify your player identity
 - **Reset Application**: Wipe all data (high scores, progress, settings)
-
----
-
-## 🐛 Known Limitations
-
-- **Wave accent**: Only appears in FANCY graphics mode (LIGHT mode skips it for performance)
-- **Browser Support**: Requires a modern browser with Web Audio API and View Transitions support
-- **Mobile**: Touch-friendly keyboard, but best played on desktop/tablet
 
 ---
 
