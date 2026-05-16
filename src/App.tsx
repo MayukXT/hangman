@@ -73,7 +73,6 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved) as GameState;
         if (parsed.screen === 'MENU') parsed.screen = 'INTRO';
-        // fill in any missing fields from older saves so nothing breaks
         return { ...INITIAL_STATE, ...parsed };
       } catch (e) {
         return INITIAL_STATE;
@@ -88,7 +87,6 @@ export default function App() {
   const [username, setUsername] = useState(() => localStorage.getItem('arcade-hangman-username'));
   const [isChangingName, setIsChangingName] = useState(false);
 
-  // checks for updates every time you open the app
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   useEffect(() => { checkForUpdate().then(info => { if (info) setUpdateInfo(info); }); }, []);
 
@@ -116,23 +114,21 @@ export default function App() {
     }, 300);
   }, []);
 
-  // saves your game to localStorage (waits 300ms so it doesn't lag when you're typing fast)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       try {
         localStorage.setItem('arcade-hangman-save', JSON.stringify(state));
-      } catch { /* storage full, not a big deal */ }
+      } catch { /* storage unavailable */ }
     }, 300);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [state]);
 
-  // save high score whenever you beat it
   useEffect(() => {
     if (state.score > highScore) {
       setHighScore(state.score);
-      try { localStorage.setItem('arcade-hangman-highscore', state.score.toString()); } catch { /* oh well */ }
+      try { localStorage.setItem('arcade-hangman-highscore', state.score.toString()); } catch { /* storage unavailable */ }
     }
 
     if (state.score > previousHighScore && !showHighScoreCross && previousHighScore > 0 && highScore > 0) {
@@ -142,13 +138,11 @@ export default function App() {
     }
   }, [state.score, highScore, previousHighScore, showHighScoreCross, triggerConfetti]);
 
-  // figure out if you won or lost (cached so it doesn't recalculate for no reason)
   const maxMistakes = getDifficultyMaxMistakes(state.difficulty);
   const mistakes = useMemo(() => state.guessedLetters.filter(l => !state.word.includes(l)).length, [state.guessedLetters, state.word]);
   const computedIsLost = mistakes >= maxMistakes;
   const computedIsWon = useMemo(() => state.word.length > 0 && state.word.split('').filter(l => l !== ' ').every(l => state.guessedLetters.includes(l)), [state.word, state.guessedLetters]);
 
-  // play sounds and update state when you win or lose
   useEffect(() => {
     if (state.screen !== 'PLAYING') return;
 
@@ -201,7 +195,6 @@ export default function App() {
   }, [computedIsWon, computedIsLost, state.isWon, state.isLost, state.screen, mistakes, state.difficulty, state.score, state.mode, state.roundsWonInLevel, state.fabulousStreak, state.hearts, triggerConfetti]);
 
 
-  // game actions (wrapped in useCallback so they don't cause extra re-renders)
   const startGameFlow = useCallback((mode: GameMode, diff: GameDifficulty) => {
     setPreviousHighScore(highScore);
     setShowHighScoreCross(false);
@@ -213,7 +206,6 @@ export default function App() {
   }, [highScore]);
 
   const handleThemeSelected = useCallback((theme: WordTheme) => {
-    // grab latest state from ref so this callback stays stable
     const s = stateRef.current;
     generateNewWord(s.difficulty, theme, s.mode, s.score);
   }, []);
@@ -227,16 +219,13 @@ export default function App() {
     stateOverrides?: Partial<GameState>
   ) => {
     setState(prev => {
-      // pick a random theme if MIXED, otherwise use what was selected
       const activeTheme = theme === 'MIXED' ? ALL_THEMES[Math.floor(Math.random() * ALL_THEMES.length)] : theme;
       const pool = THEME_DICT[activeTheme];
 
-      // handle old save format - if it's the old array style, start fresh
       const seenWordsMap: Record<string, string[]> =
         prev.seenWords && !Array.isArray(prev.seenWords) ? prev.seenWords : {};
       const themeSeenWords: string[] = seenWordsMap[activeTheme] || [];
 
-      // only pick words you haven't seen yet that fit the difficulty's length range
       let availableWords = pool.filter(item => {
         const word = item.word.toUpperCase();
         if (themeSeenWords.includes(word)) return false;
@@ -247,12 +236,10 @@ export default function App() {
         return true;
       });
 
-      // if nothing matches the length, just pick any unseen word
       if (availableWords.length === 0) {
         availableWords = pool.filter(item => !themeSeenWords.includes(item.word.toUpperCase()));
       }
 
-      // if you've seen every word in this theme, reset and start over
       let updatedThemeSeenWords = themeSeenWords;
       if (availableWords.length === 0) {
         availableWords = pool;
@@ -295,21 +282,17 @@ export default function App() {
 
     if (s.isLost) {
       if (s.mode === 'CASUAL') {
-        // casual mode: you don't really lose, just reset score and keep going
         generateNewWord(s.difficulty, s.theme || 'MIXED', s.mode, 0, s.hearts, { fabulousStreak: 0 });
         return;
       }
-      // default mode: lose a heart but keep playing if you have some left
       if (s.hearts >= 0 && s.hearts !== 0) {
         generateNewWord(s.difficulty, s.theme || 'MIXED', s.mode, s.score, s.hearts, { fabulousStreak: 0 });
         return;
       }
-      // no hearts = you're done, back to start
       setState(INITIAL_STATE);
       return;
     }
 
-    // if you won, check if you should level up (default mode only)
     let nextDifficulty = s.difficulty;
     let nextTheme = s.theme;
     let nextHearts = s.hearts;
@@ -325,7 +308,7 @@ export default function App() {
         } else if (s.difficulty === 'HARD') {
           nextDifficulty = 'INSANE';
           nextTheme = 'MIXED';
-          nextHearts = 0; // insane mode = no hearts, good luck lol
+          nextHearts = 0;
         }
       }
     }
@@ -334,7 +317,6 @@ export default function App() {
   }, []);
 
 
-  // ref trick so the guess function always sees the latest state
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -361,7 +343,6 @@ export default function App() {
     });
   }, []);
 
-  // let the player type letters on their keyboard to guess
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (state.screen !== 'PLAYING') return;
@@ -409,8 +390,7 @@ export default function App() {
     <AccentProvider>
       <div className="bg-black text-slate-100 selection:bg-violet-900 overflow-y-auto overflow-x-hidden relative min-h-screen">
       
-      {/* watermark at the bottom right */}
-      <div className="fixed bottom-4 right-6 z-[150] group pointer-events-none">
+      <div className="fixed bottom-4 right-6 z-[150] group hidden pointer-events-none select-none md:block">
         <span className="font-['Press_Start_2P'] text-[10px] text-[#8B6508] transition-colors duration-500 group-hover:text-[#FFD700] drop-shadow-[0_0_10px_rgba(139,101,8,0.4)] group-hover:drop-shadow-[0_0_20px_rgba(255,215,0,0.8)] pointer-events-auto cursor-default">
           Made by Mayuk
         </span>

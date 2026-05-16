@@ -40,7 +40,6 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
   const [checking, setChecking] = useState(false);
   const [localUpdateInfo, setLocalUpdateInfo] = useState<UpdateInfo | null>(updateInfo);
 
-  // Reset warning state when modal closes
   useEffect(() => { if (!isOpen) setShowUpdateWarning(false); }, [isOpen]);
   useEffect(() => { setLocalUpdateInfo(updateInfo); }, [updateInfo]);
 
@@ -66,7 +65,6 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
   
   useEffect(() => {
     if (isOpen) {
-      // Fetch GitHub profile picture
       fetch('https://api.github.com/users/MayukXT')
         .then(res => res.json())
         .then(data => {
@@ -149,7 +147,7 @@ const AboutModal = ({ isOpen, onClose, accentColor, updateInfo, onUpdateFound }:
               </div>
               <div className="p-4 bg-slate-800/30 rounded-xl border border-slate-700/50 flex flex-col gap-1">
                 <span className="font-['Press_Start_2P'] text-[10px] text-slate-500">BUILD DATE</span>
-                <span className="font-['Orbitron'] font-bold text-slate-300 tracking-wider">2026-04-10</span>
+                <span className="font-['Orbitron'] font-bold text-slate-300 tracking-wider">2026-05-16</span>
               </div>
               <div className={`col-span-2 p-4 bg-slate-800/30 rounded-xl border ${localUpdateInfo ? 'border-emerald-500/50' : 'border-slate-700/50'} flex flex-col gap-1`}>
                 <span className="font-['Press_Start_2P'] text-[10px] text-slate-500">STATUS</span>
@@ -235,7 +233,7 @@ export const GlobalSettings = ({ isNameEntryActive, onChangeNameClick, onClearDa
           onClearData();
         }}
         title="SYSTEM WIPE"
-        description="Last chance, pal. This wipes your name, score, dignity, and all that saved crap. The machine forgets you ever existed. No backup, no recovery, just emptiness."
+        description="Deletes your name, high score, saved run, and settings. No recovery."
         requireTyping="reset"
         confirmText="ERASE ME"
       />

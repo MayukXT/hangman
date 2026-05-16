@@ -32,14 +32,13 @@ export const NameEntryScreen = ({ onSaveName, onCancel }: { onSaveName: (name: s
 
         <h1 className="font-['Orbitron'] font-black text-3xl text-slate-100 mb-2 tracking-widest text-center drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">CLAIM YOUR NAME</h1>
         <p className="font-['JetBrains_Mono'] text-sm text-indigo-300/80 mb-8 text-center max-w-[260px]">
-          Your arcade name. Your claim to fame. Your excuse for sucking.
+          Pick the name the scoreboard remembers.
         </p>
 
         <div className="w-full mb-8 relative">
           
           <div className={`relative w-full bg-slate-950/80 border-2 rounded-xl h-[72px] overflow-hidden transition-all shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] ${isFocused ? themeTokens.border : 'border-slate-700'}`}>
             
-            {/* The actual hidden caret native text input */}
             <input
               id="gamename"
               required
@@ -53,7 +52,6 @@ export const NameEntryScreen = ({ onSaveName, onCancel }: { onSaveName: (name: s
               placeholder="PLAYER1"
             />
             
-            {/* The fake block caret rendering logic */}
             <div className={`absolute inset-0 pointer-events-none flex items-center justify-center font-['Press_Start_2P'] text-[16px] font-black tracking-widest`}>
                <span className="opacity-0">{name}</span>
                {isFocused && <span className={`inline-block w-[1.1ch] h-[1.3em] rounded-[1px] animate-pulse ml-0.5 shrink-0 ${themeTokens.bg}`} />}

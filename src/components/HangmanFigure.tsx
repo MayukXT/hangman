@@ -48,8 +48,8 @@ const HangmanFigureInner = ({ mistakes, maxMistakes, isLost }: { mistakes: numbe
 
   return (
     <svg 
-      height="280" 
-      width="280" 
+      viewBox="0 0 280 280"
+      className="h-full w-full"
       style={{ filter: `drop-shadow(${shadowFilter})` }}
       stroke={strokeColor}
       strokeWidth="5"
@@ -90,5 +90,4 @@ const HangmanFigureInner = ({ mistakes, maxMistakes, isLost }: { mistakes: numbe
   );
 };
 
-// Only re-render when mistakes count, maxMistakes, or isLost actually change
 export const HangmanFigure = React.memo(HangmanFigureInner);

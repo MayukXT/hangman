@@ -108,12 +108,10 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
   const [stage, setStage] = useState<'info' | 'downloading' | 'done' | 'error'>('info');
   const [progress, setProgress] = useState<UpdateProgress>({ downloaded: 0, total: 0 });
   const [errorMsg, setErrorMsg] = useState('');
-  // Detect install type so we can give portable users the right guidance
   const [installType, setInstallType] = useState<InstallType>('unknown');
 
   useOnClickOutside(modalRef, () => { if (stage === 'info' || stage === 'error') onClose(); });
 
-  // Check install type whenever the modal opens, reset state on close
   useEffect(() => {
     if (isOpen) {
       setStage('info');
@@ -131,7 +129,6 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
 
   const handleInstall = async () => {
     if (!canAutoUpdate) {
-      // Fallback: open GitHub releases page in browser (dev mode only)
       onContinue();
       return;
     }
@@ -139,9 +136,7 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
     try {
       await downloadAndInstallUpdate((p) => setProgress(p));
       setStage('done');
-      // On Windows the app exits automatically before reaching here
     } catch (e) {
-      // Show the raw error from Tauri so it's easy to diagnose what went wrong
       const raw =
         e instanceof Error
           ? e.message
@@ -153,7 +148,6 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
     }
   };
 
-  // Opens the GitHub releases page via the Tauri shell plugin (or window.open in dev)
   const handlePortableDownload = async () => {
     try {
       if (isTauriApp()) {
@@ -163,7 +157,6 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
         window.open(RELEASES_URL, '_blank', 'noopener,noreferrer');
       }
     } catch {
-      // Last resort fallback
       window.open(RELEASES_URL, '_blank', 'noopener,noreferrer');
     }
   };
@@ -191,32 +184,27 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
           )}
         </div>
 
-        {/* ── Portable EXE notice ─────────────────────────────────────── */}
         {stage === 'info' && isPortable && (
           <>
             <div className="space-y-4 text-sm font-['JetBrains_Mono'] mb-6">
-              {/* Portable badge */}
               <div className="p-4 bg-amber-950/40 rounded-xl border border-amber-600/60">
-                <p className="text-amber-400 font-bold mb-2 text-base">📦 You're running the Portable EXE</p>
+                <p className="text-amber-400 font-bold mb-2 text-base">Portable EXE detected</p>
                 <p className="text-slate-300 leading-relaxed">
-                  The in-app auto-updater only works with the <span className="text-white font-bold">NSIS installer</span> edition.
-                  Portable builds are self-contained and cannot be updated silently — a new EXE must be downloaded manually.
+                  Auto-update needs the <span className="text-white font-bold">installer</span> build. Portable users download the new EXE manually.
                 </p>
               </div>
 
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
-                <p className="text-cyan-400 font-bold mb-1">📥 How to update</p>
+                <p className="text-cyan-400 font-bold mb-1">Update path</p>
                 <p className="text-slate-300 leading-relaxed">
-                  Click the button below to open the GitHub Releases page. Download the new{' '}
-                  <span className="text-white font-bold">portable EXE</span> and replace your current file — no installation needed.
+                  Open Releases, download the latest <span className="text-white font-bold">portable EXE</span>, and replace the old file.
                 </p>
               </div>
 
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
-                <p className="text-emerald-400 font-bold mb-1">💾 Your Data is Safe</p>
+                <p className="text-emerald-400 font-bold mb-1">Save data</p>
                 <p className="text-slate-300 leading-relaxed">
-                  Your scores, username, and settings are stored separately and will{' '}
-                  <strong className="text-white">persist automatically</strong>. Just swap the EXE file.
+                  Scores, username, and settings stay intact.
                 </p>
               </div>
             </div>
@@ -243,33 +231,32 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
           </>
         )}
 
-        {/* ── Normal installer (NSIS / MSI) update flow ───────────────── */}
         {stage === 'info' && !isPortable && (
           <>
             <div className="space-y-4 text-sm font-['JetBrains_Mono'] mb-6">
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
-                <p className="text-amber-400 font-bold mb-1">⚠ Windows SmartScreen</p>
-                <p className="text-slate-300 leading-relaxed">Windows may show a SmartScreen warning because this app isn't code-signed. Code signing certificates cost $100+/year — unreasonable for a free indie game. Click <span className="text-white font-bold">"More info"</span> → <span className="text-white font-bold">"Run anyway"</span> if prompted.</p>
+                <p className="text-amber-400 font-bold mb-1">SmartScreen</p>
+                <p className="text-slate-300 leading-relaxed">Windows may warn because this indie build is not code-signed. Choose <span className="text-white font-bold">More info</span>, then <span className="text-white font-bold">Run anyway</span>.</p>
               </div>
 
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
-                <p className="text-cyan-400 font-bold mb-1">🛡 Admin Permission (UAC)</p>
-                <p className="text-slate-300 leading-relaxed">The update installer needs admin privileges to modify game files. This is standard for all Windows app updates. A UAC prompt will appear.</p>
+                <p className="text-cyan-400 font-bold mb-1">Admin prompt</p>
+                <p className="text-slate-300 leading-relaxed">The installer needs permission to replace app files. A Windows UAC prompt will appear.</p>
               </div>
 
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
-                <p className="text-emerald-400 font-bold mb-1">💾 Your Data is Safe</p>
-                <p className="text-slate-300 leading-relaxed">Your scores, username, and settings are stored separately and will <strong className="text-white">persist automatically</strong>. No data will be lost.</p>
+                <p className="text-emerald-400 font-bold mb-1">Save data</p>
+                <p className="text-slate-300 leading-relaxed">Scores, username, and settings stay intact.</p>
               </div>
 
               <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700">
-                <p className="text-violet-400 font-bold mb-1">🔐 Verified &amp; Signed</p>
-                <p className="text-slate-300 leading-relaxed">Updates are cryptographically signed. The app verifies the signature before installing — no tampered files can get through.</p>
+                <p className="text-violet-400 font-bold mb-1">Verified update</p>
+                <p className="text-slate-300 leading-relaxed">The app checks the update signature before installing.</p>
               </div>
             </div>
 
             <p className="text-slate-500 text-xs font-['JetBrains_Mono'] mb-6">
-              Updating to <span className="text-slate-300">{version}</span> — The app will download, install, and restart automatically.
+              Updating to <span className="text-slate-300">{version}</span>. The app will restart when ready.
             </p>
 
             <div className="flex justify-end gap-3">
@@ -292,7 +279,7 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
         {stage === 'downloading' && (
           <div className="space-y-4">
             <p className="text-slate-300 font-['JetBrains_Mono'] text-sm">
-              Downloading and installing {version}... Do not close the app.
+              Installing {version}. Keep the app open.
             </p>
             <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
               <div 
@@ -305,7 +292,7 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
               <span>
                 {progress.total > 0 
                   ? `${(progress.downloaded / 1024 / 1024).toFixed(1)} / ${(progress.total / 1024 / 1024).toFixed(1)} MB`
-                  : 'Calculating...'}
+                  : 'Preparing...'}
               </span>
             </div>
           </div>
@@ -313,7 +300,7 @@ export const UpdateWarningModal = ({ isOpen, onClose, onContinue, version }: Upd
 
         {stage === 'done' && (
           <p className="text-emerald-400 font-['JetBrains_Mono'] text-sm">
-            Update installed. The app will restart momentarily...
+            Update installed. Restarting now.
           </p>
         )}
 

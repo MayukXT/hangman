@@ -26,23 +26,23 @@ export const RulesScreen = ({ onBack }: RulesScreenProps) => {
           
           <ul className="list-disc pl-8 space-y-4 mb-8">
             <li>
-              <strong className="text-rose-400">DEFAULT MODE (ENDLESS):</strong> Starts easy. Weirdly easy, actually. You'll sail through EASY, fight your way through NORMAL, sweat buckets on HARD, and then INSANE just stares at you and laughs. One wrong word? Score goes to zero and you're back to the menu. No saves, no mercy, no refunds, no do-overs.
+              <strong className="text-rose-400">DEFAULT MODE:</strong> Endless run. Start on EASY, climb to INSANE, and keep your score alive. Lose the run and the streak is gone.
             </li>
             <li>
-              <strong className="text-emerald-400">CASUAL MODE:</strong> Pick a difficulty and stick with it. No stress, no big deal. Just you, a noose, and that nagging feeling you're probably wasting your time. Good for practice, or when you wanna pretend you're actually decent at this game.
+              <strong className="text-emerald-400">CASUAL MODE:</strong> Pick a difficulty and stay there. Good for practice, warmups, and quick rounds.
             </li>
             <li>
-              <strong className="text-yellow-400">SCORING:</strong> Easy gives +1 (meh), Normal +3 (okay), Hard +7 (getting somewhere), Insane +15 (either you're cheating or you're way better than me). 
-              <br/><span className="text-cyan-300 text-lg mt-1 block">⚡ FLAWLESS BONUS: Nail a word with zero mistakes and your score doubles. The game loves violence and perfection equally. But mostly violence.</span>
+              <strong className="text-yellow-400">SCORING:</strong> Easy +1, Normal +3, Hard +7, Insane +15.
+              <br/><span className="text-cyan-300 text-lg mt-1 block">FLAWLESS BONUS: Solve with zero mistakes and the round score doubles.</span>
             </li>
             <li>
-              <strong className="text-purple-400">CLUES:</strong> Every word has a clue that rotates in the corner. Basically the game whispering hints in your ear. Go ahead, feel smug about it — you didn't earn shit.
+              <strong className="text-purple-400">CLUES:</strong> Clues rotate during the round. Read fast, guess smarter.
             </li>
             <li>
-              <strong className="text-amber-400">HINTS:</strong> Hit the lightbulb for a full hint. Costs 2 points — basically selling your soul to the devil. Less paperwork though, he takes IOUs.
+              <strong className="text-amber-400">HINTS:</strong> The lightbulb gives a direct hint. Cost: 2 points.
             </li>
             <li>
-              <strong className="text-rose-300">LIVES (DEFAULT only):</strong> You get 5 hearts. Screw up a word, lose a heart. Lose 'em all and it's over — for real this time. INSANE skips lives because you're already screwed. Or need therapy. Whatever hits first.
+              <strong className="text-rose-300">LIVES:</strong> Default mode gives 5 hearts. A failed word costs one. INSANE skips hearts.
             </li>
           </ul>
 

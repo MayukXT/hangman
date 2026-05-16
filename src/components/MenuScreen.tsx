@@ -48,29 +48,26 @@ export const MenuScreen = ({ onStartGame, onOpenRules, highScore, username, upda
 
         <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          {/* DEFAULT MODE (Endless) */}
           <div 
-            onClick={() => onStartGame('DEFAULT', 'EASY')} // Start easy, random theme at runtime per word
+            onClick={() => onStartGame('DEFAULT', 'EASY')}
             className={`group relative flex flex-col items-center p-8 bg-slate-900 border-2 rounded-2xl cursor-pointer transition-colors duration-0 transform hover:scale-105 overflow-hidden ${themeTokens.border} ${themeTokens.hoverBorder} ${themeTokens.shadow}`}
           >
-            {/* Glowing orb effect */}
             <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 opacity-20 blur-3xl group-hover:opacity-40 transition-colors duration-0 ${themeTokens.bg}`} />
             
             <Gamepad2 size={48} className={`mb-4 group-hover:animate-bounce relative z-10 transition-colors duration-0 ${themeTokens.text}`} />
             <h3 className="font-['Orbitron'] text-3xl font-black text-slate-50 mb-2 relative z-10 tracking-widest">DEFAULT</h3>
             <p className="font-['VT323'] text-slate-300 text-xl text-center relative z-10 leading-tight">
-              One shot. No checkpoints. No excuses.<br/>Levels up from EASY to INSANE.<br/>Spoiler: You probably won't make it.
+              One run. No checkpoints.<br/>Climb from EASY to INSANE.
             </p>
           </div>
 
-          {/* CASUAL MODES */}
           <div className="flex flex-col gap-4">
-            <h3 className="font-['Orbitron'] text-sm tracking-widest text-slate-400 font-bold uppercase text-center mb-2">Casual: No Pressure, No Shame</h3>
+            <h3 className="font-['Orbitron'] text-sm tracking-widest text-slate-400 font-bold uppercase text-center mb-2">Casual Practice</h3>
             
             {(['EASY', 'NORMAL', 'HARD'] as GameDifficulty[]).map((diff) => (
               <div 
                 key={diff}
-                onClick={() => onStartGame('CASUAL', diff)} // Actually we should let them choose theme but for MVP flow click to open Theme mode
+                onClick={() => onStartGame('CASUAL', diff)}
                 className="group flex justify-between items-center px-6 py-4 bg-slate-800/50 hover:bg-slate-700/80 border border-slate-700 hover:border-cyan-500/50 rounded-xl cursor-pointer transition-all duration-200"
               >
                 <div className="flex items-center gap-3">

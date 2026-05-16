@@ -16,7 +16,6 @@ const KEYBOARD = [
   ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
 ];
 
-// shadow colors for the wave effect (kept outside so it doesn't get remade every render)
 const ACCENT_SHADOW_MAP: Record<string, string> = {
   RED: 'rgba(249, 115, 22, 0.7)',
   YELLOW: 'rgba(251, 191, 36, 0.7)',
@@ -52,30 +51,23 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
   const isWinLocked = state.isWon;
   const isFlawlessWin = isWinLocked && mistakes === 0;
 
-  // split the word into letters (cached so we don't redo it constantly)
   const wordChars = useMemo(() => state.word.split(''), [state.word]);
-  // set for fast lookups instead of searching through the array every time
   const guessedSet = useMemo(() => new Set(state.guessedLetters), [state.guessedLetters]);
 
-  // bg color
   const bgTheme = 'bg-[#0a0a0f]';
 
-  // grab all the wave-target elements and cache them so we don't keep querying the DOM
   const waveElCacheRef = useRef<HTMLElement[]>([]);
   useEffect(() => {
-    // wait for paint so the elements actually exist in the DOM
     requestAnimationFrame(() => {
       waveElCacheRef.current = Array.from(document.querySelectorAll('.wave-target')) as HTMLElement[];
     });
   }, [state.word, state.guessedLetters]);
 
-  // the wave animation that ripples across all the keys when you change accent color
   React.useEffect(() => {
     if (!wave.timestamp) return;
 
     const waveElements = waveElCacheRef.current;
     if (!waveElements.length) {
-      // if the cache is empty somehow, grab them now
       waveElCacheRef.current = Array.from(document.querySelectorAll('.wave-target')) as HTMLElement[];
     }
     const els = waveElCacheRef.current;
@@ -84,34 +76,30 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
     const maxDist = Math.hypot(window.innerWidth, window.innerHeight);
     const shadowColor = ACCENT_SHADOW_MAP[wave.color] || ACCENT_SHADOW_MAP.CYAN;
 
-    // figure out how far each element is from the click point
     const entries: { el: HTMLElement; delay: number }[] = [];
     for (let i = 0; i < els.length; i++) {
       const el = els[i];
       const rect = el.getBoundingClientRect();
       const dist = Math.hypot(rect.left + rect.width / 2 - wave.originX, rect.top + rect.height / 2 - wave.originY);
-      entries.push({ el, delay: (dist / maxDist) * wave.durationMs }); // Sync to the actual wipe speed!
+      entries.push({ el, delay: (dist / maxDist) * wave.durationMs });
     }
 
-    // do all the DOM writes in one frame so it doesn't stutter
     requestAnimationFrame(() => {
       for (const { el, delay } of entries) {
         el.style.setProperty('--wave-delay', `${delay}ms`);
         el.style.setProperty('--wave-shadow-color', shadowColor);
         el.classList.remove('animate-wave-bump');
       }
-      // Force single reflow then apply
       void (entries[0]?.el.offsetWidth);
       for (const { el, delay } of entries) {
         el.classList.add('animate-wave-bump');
-        // remove the class after it plays so it can trigger again next time
         setTimeout(() => el.classList.remove('animate-wave-bump'), delay + 600);
       }
     });
   }, [wave.timestamp, wave.originX, wave.originY, wave.color, wave.durationMs]);
 
   return (
-    <div className={`w-full min-h-screen flex flex-col items-center justify-center p-4 relative font-['JetBrains_Mono'] transition-colors duration-1000 ${bgTheme}`}>
+    <div className={`w-full min-h-screen flex flex-col items-center justify-start p-3 pt-20 sm:p-4 sm:pt-20 lg:p-6 lg:pt-6 relative overflow-x-hidden select-none font-['JetBrains_Mono'] transition-colors duration-1000 ${bgTheme}`}>
       
       {/* retro TV scanline overlay - only shows in fancy mode */}
       {isFancy && (
@@ -131,7 +119,7 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
           onClearData();
         }}
         title="PURGE SYSTEM"
-        description="WARNING: This will permanently delete your identity, your high scores, and all progression data. This cannot be undone."
+        description="Deletes your name, high score, saved run, and settings. No recovery."
         requireTyping="reset"
         confirmText="ERASE DATA"
       />
@@ -147,24 +135,24 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
         variant="warning"
         description={
           <>
-            Are you completely sure you want to abandon this run? Your score of <span className="font-bold text-amber-500 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800">{state.score}</span> will be finalize-saved, but you will lose current session progress.
+            Leave this run? Score <span className="font-bold text-amber-500 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-800">{state.score}</span> stays saved, but this word ends now.
           </>
         }
         confirmText="ABORT"
       />
 
       {/* top bar with all the buttons and info */}
-      <div className="absolute top-6 left-[88px] right-6 z-40 flex justify-between items-start pointer-events-none">
+      <div className="relative z-40 mb-3 flex w-full max-w-7xl flex-col items-stretch justify-between gap-3 pointer-events-none lg:pl-[72px] xl:mb-4 xl:flex-row xl:items-start">
         
         {/* left side - high score, restart, menu */}
-        <div className="flex gap-4 pointer-events-auto h-[52px] items-stretch">
-          <div className={`flex items-center justify-center gap-2 px-4 bg-slate-900 border-2 border-slate-700 rounded-xl text-slate-300 shadow-lg font-['Orbitron'] ${isFancy ? 'backdrop-blur-sm' : ''}`}>
-            <span className="font-bold tracking-widest text-sm flex items-center gap-1">HS🔥: <span className={themeTokens.text}>{highScore}</span></span>
+        <div className="flex min-h-12 flex-wrap items-stretch justify-center gap-2 pointer-events-auto sm:justify-start sm:gap-3">
+          <div className={`flex min-w-0 items-center justify-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-3 text-slate-300 shadow-lg font-['Orbitron'] sm:px-4 ${isFancy ? 'backdrop-blur-sm' : ''}`}>
+            <span className="flex items-center gap-1 text-xs font-bold tracking-widest sm:text-sm">HS🔥: <span className={themeTokens.text}>{highScore}</span></span>
           </div>
 
           <button 
             onClick={() => { sfx.stopCurrent(); onRestartInPlace(); }}
-            className="group flex items-center justify-center gap-2 px-5 bg-slate-900 border-2 border-slate-700 hover:border-amber-500 hover:bg-amber-950/30 rounded-xl text-slate-300 hover:text-amber-400 transition-all font-['Orbitron'] shadow-lg active:scale-95"
+            className="group flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-3 text-slate-300 shadow-lg transition-all active:scale-95 hover:border-amber-500 hover:bg-amber-950/30 hover:text-amber-400 font-['Orbitron'] sm:px-5"
           >
             <RotateCcw size={20} className="group-hover:-rotate-180 transition-transform duration-700" />
             <span className="hidden sm:inline font-bold tracking-widest text-sm">RESTART</span>
@@ -172,24 +160,22 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
           
           <button 
             onClick={() => setIsAbortModalOpen(true)}
-            className="group flex items-center justify-center gap-2 px-5 bg-slate-900 border-2 border-slate-700 hover:border-violet-500 hover:bg-violet-900/30 rounded-xl text-slate-300 hover:text-violet-400 transition-all font-['Orbitron'] shadow-lg active:scale-95"
+            className="group flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-slate-700 bg-slate-900 px-3 text-slate-300 shadow-lg transition-all active:scale-95 hover:border-violet-500 hover:bg-violet-900/30 hover:text-violet-400 font-['Orbitron'] sm:px-5"
           >
             <LayoutDashboard size={20} />
             <span className="hidden sm:inline font-bold tracking-widest text-sm">MENU</span>
           </button>
         </div>
 
-        {/* right side - lives, username, score, theme */}
-        <div className="flex flex-col items-end gap-3 pointer-events-auto">
+        <div className="flex w-full min-w-0 flex-col items-stretch gap-3 pointer-events-auto xl:w-auto xl:items-end">
           
-          <div className="flex items-center gap-6">
-            {/* pixely hearts for your remaining lives */}
+          <div className="flex min-w-0 flex-wrap items-center justify-center gap-3 xl:justify-end xl:gap-6">
             {state.mode === 'DEFAULT' && state.difficulty !== 'INSANE' && (
-              <div className="flex gap-2 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">
+              <div className="flex flex-wrap justify-center gap-1 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] sm:gap-2">
                 {Array.from({ length: 5 }, (_, i) => (
                   <span
                     key={i}
-                    className={`font-['Press_Start_2P'] text-2xl md:text-3xl transition-all duration-300 ${i < state.hearts ? 'text-rose-500 drop-shadow-[0_0_8px_rgba(239,68,68,1)]' : 'text-slate-800/50 scale-75'}`}
+                    className={`font-['Press_Start_2P'] text-xl transition-all duration-300 sm:text-2xl md:text-3xl ${i < state.hearts ? 'text-rose-500 drop-shadow-[0_0_8px_rgba(239,68,68,1)]' : 'text-slate-800/50 scale-75'}`}
                   >
                     ♥
                   </span>
@@ -197,16 +183,14 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
               </div>
             )}
 
-            {/* your name */}
-            <div className={`flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-700/50 rounded-lg shadow-md font-['Press_Start_2P'] ${isFancy ? 'backdrop-blur-sm' : ''}`}>
+            <div className={`flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900 px-3 py-2 shadow-md font-['Press_Start_2P'] sm:px-4 ${isFancy ? 'backdrop-blur-sm' : ''}`}>
               <User size={14} className="text-violet-400" />
-              <span className="text-xs text-slate-300 uppercase tracking-widest">{username}</span>
+              <span className="max-w-[12rem] truncate text-[10px] uppercase tracking-widest text-slate-300 sm:text-xs">{username}</span>
             </div>
           </div>
 
-          {/* score and difficulty level */}
-          <div className={`flex items-center gap-6 bg-slate-900 border border-slate-700 px-5 py-3 rounded-xl shadow-xl font-['Orbitron'] w-fit ${isFancy ? 'backdrop-blur-sm' : ''}`}>
-            <div className="flex flex-col items-center border-r border-slate-700 pr-6">
+          <div className={`flex w-full items-center justify-center gap-4 self-center rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 shadow-xl font-['Orbitron'] sm:w-fit sm:gap-6 sm:px-5 xl:self-end ${isFancy ? 'backdrop-blur-sm' : ''}`}>
+            <div className="flex flex-col items-center border-r border-slate-700 pr-4 sm:pr-6">
               <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">SCORE</span>
               <span className={`text-2xl font-bold drop-shadow-[0_0_5px_currentColor] transition-colors duration-0 ${themeTokens.text}`}>
                 {state.score}
@@ -220,17 +204,15 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
             </div>
           </div>
           
-          {/* theme name and clue card */}
-          <div className="flex flex-col items-stretch w-56 mt-1">
-            <div className={`font-['VT323'] text-2xl text-slate-300 bg-slate-900/60 px-4 py-1 rounded-lg border border-slate-800 flex gap-2 ${isFancy ? 'backdrop-blur-sm' : ''}`}>
-              THEME: <span className={`tracking-wider uppercase ${state.difficulty === 'INSANE' ? 'line-through text-rose-500' : themeTokens.text}`}>
-                {(state.runtimeTheme || state.theme || 'MIXED').replace('_', ' ')}
+          <div className="mt-1 flex w-full max-w-full flex-col items-stretch self-center sm:w-[26rem] xl:w-[22rem] xl:self-end">
+            <div className={`flex flex-wrap items-center justify-center gap-x-2 gap-y-0 rounded-lg border border-slate-800 bg-slate-900/60 px-4 py-1 text-center text-xl text-slate-300 font-['VT323'] sm:text-2xl xl:justify-start xl:text-left ${isFancy ? 'backdrop-blur-sm' : ''}`}>
+              THEME: <span className={`break-words uppercase tracking-wider [overflow-wrap:anywhere] ${state.difficulty === 'INSANE' ? 'line-through text-rose-500' : themeTokens.text}`}>
+                {(state.runtimeTheme || state.theme || 'MIXED').replace(/_/g, ' ')}
               </span>
             </div>
 
-            {/* the clue for your current word */}
-            <div className={`mt-2 w-full bg-slate-900/40 border border-slate-700/50 rounded-xl flex items-center justify-center p-3 text-center transition-all shadow-lg min-h-[5rem] ${isFancy ? 'backdrop-blur-md' : ''}`}>
-              <span className={`font-['JetBrains_Mono'] text-sm sm:text-base italic opacity-80 leading-relaxed font-bold select-none pointer-events-none ${state.wordClue ? themeTokens.text : 'text-slate-500'}`}>
+            <div className={`mt-2 flex max-h-32 min-h-16 w-full overflow-y-auto rounded-xl border border-slate-700/50 bg-slate-900/40 p-3 text-center shadow-lg transition-all ${state.wordClue ? 'items-start justify-center' : 'items-center justify-center'} ${isFancy ? 'backdrop-blur-md' : ''}`}>
+              <span className={`break-words text-xs font-bold italic leading-tight opacity-80 pointer-events-none [overflow-wrap:anywhere] font-['JetBrains_Mono'] sm:text-sm md:text-base ${state.wordClue ? themeTokens.text : 'text-slate-500'}`}>
                 {state.wordClue || '🔍'}
               </span>
             </div>
@@ -238,13 +220,13 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
         </div>
       </div>
 
-<div className="flex flex-col items-center gap-2 lg:gap-4 mt-2 md:mt-4 w-full max-w-5xl z-10">
+<div className="z-10 flex w-full max-w-6xl flex-1 flex-col items-center justify-center gap-3 lg:gap-4">
 
           {/* main game area */}
-          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6 w-full justify-center mt-0">
+          <div className="flex w-full min-w-0 flex-col items-center justify-center gap-3 lg:flex-row lg:gap-6">
           
           {/* the hangman drawing */}
-          <div className={`relative flex items-center justify-center p-6 bg-slate-900/80 rounded-2xl border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] transition-all duration-500 ${isFancy ? 'backdrop-blur-md' : ''} ${isFlawlessWin ? 'border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.3)]' : 'border-slate-800'}`}>
+          <div className={`relative flex h-56 w-56 shrink-0 items-center justify-center rounded-xl border-2 bg-slate-900/80 p-3 shadow-[0_0_30px_rgba(0,0,0,0.8)] transition-all duration-500 sm:h-64 sm:w-64 sm:p-4 lg:h-[320px] lg:w-[320px] lg:p-5 ${isFancy ? 'backdrop-blur-md' : ''} ${isFlawlessWin ? 'border-amber-500 shadow-[0_0_40px_rgba(245,158,11,0.3)]' : 'border-slate-800'}`}>
             <HangmanFigure mistakes={mistakes} maxMistakes={maxMistakes} isLost={isLossLocked} />
             
             {isFlawlessWin ? (
@@ -258,7 +240,7 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
             )}
           </div>
 
-          <div className="flex flex-col items-center gap-2 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-2">
 
             <div className="flex flex-col items-center gap-0">
               {/* Fabulous Streak Counter */}
@@ -290,12 +272,12 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
             </div>
 
             {/* Word Display */}
-            <div className="flex flex-wrap justify-center gap-x-2 gap-y-2 px-2">
+            <div className="flex max-w-full flex-wrap justify-center gap-x-1.5 gap-y-2 px-1 sm:gap-x-2 sm:px-2">
               {wordChars.map((letter, index) => {
                 if (letter === ' ') return (
                   <div
                     key={`${state.word}-space-${index}`}
-                    className="w-6 sm:w-8 h-16 sm:h-[4.5rem] flex items-end justify-center pb-1"
+                    className="flex h-12 w-4 items-end justify-center pb-1 sm:h-16 sm:w-6 md:h-[4.5rem] md:w-8"
                   >
                     <div className="w-full border-b-[6px] border-slate-700/40 rounded-sm" />
                   </div>
@@ -306,7 +288,7 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
                   <div 
                     key={`${state.word}-${index}`} 
                     className={`
-                      w-10 sm:w-12 h-16 sm:h-[4.5rem] flex items-center justify-center text-3xl font-bold rounded-md
+                      flex h-12 w-8 items-center justify-center rounded-md text-2xl font-bold sm:h-16 sm:w-10 sm:text-3xl md:h-[4.5rem] md:w-12
                         border-b-[6px] overflow-visible transition-all duration-500 transform
                       ${isFlawlessWin 
                         ? 'border-amber-400 bg-amber-950/40 text-amber-100 scale-100 shadow-[0_0_20px_rgba(245,158,11,0.4)] animate-flawless' 
@@ -324,11 +306,10 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
               })}
             </div>
 
-            {/* hint text if you used your hint */}
             {state.hintsUsed > 0 && (
-              <div className="w-full max-w-xl overflow-hidden bg-slate-800/80 border border-yellow-500/50 rounded-xl p-2 px-4 shadow-[0_0_15px_rgba(234,179,8,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="max-h-32 w-full max-w-xl overflow-y-auto rounded-xl border border-yellow-500/50 bg-slate-800/80 p-2 px-4 shadow-[0_0_15px_rgba(234,179,8,0.15)] animate-in fade-in slide-in-from-top-4 duration-500">
                 <p className="font-['Orbitron'] text-xs text-yellow-500 mb-0 tracking-widest font-bold">DECRYPTED DATA:</p>
-                <p className="font-['VT323'] text-xl text-slate-200 select-none pointer-events-none">{state.wordHint}</p>
+                <p className="break-words text-base leading-snug text-slate-200 pointer-events-none [overflow-wrap:anywhere] font-['VT323'] sm:text-xl">{state.wordHint}</p>
               </div>
             )}
             
@@ -363,7 +344,7 @@ export const GameScreen = ({ state, highScore, username, onGuess, onHint, onNext
         </div>
 
         {/* on-screen keyboard */}
-        <div className="mt-2 flex flex-col gap-2 sm:gap-3 w-full max-w-4xl px-2 z-20 pb-4">
+        <div className="z-20 mt-2 flex w-full max-w-4xl flex-col gap-2 px-0 pb-4 sm:gap-3 sm:px-2">
           {KEYBOARD.map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-1 sm:gap-2">
               {row.map(key => (
@@ -408,7 +389,7 @@ const KeyboardKey = React.memo(({ letter, isGuessed, isCorrect, isWrong, isDisab
       onClick={handleClick}
       disabled={isGuessed || isDisabled}
       className={`keyboard-key wave-target
-        relative overflow-visible w-9 h-12 sm:w-12 sm:h-14 md:w-16 md:h-16 rounded-lg text-lg sm:text-xl font-bold
+        relative h-11 w-[8.4vw] min-w-7 max-w-9 overflow-visible rounded-lg text-base font-bold sm:h-14 sm:w-12 sm:max-w-none sm:text-xl md:h-16 md:w-16
         flex items-center justify-center border-2
         transition-[transform,border-color,color,box-shadow,background-color] duration-75 will-change-transform
         ${!isGuessed ? `bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700 ${themeTokens.hoverBorder} ${themeTokens.hoverText} ${isFancy ? 'hover:shadow-[0_0_20px_currentColor]' : ''} hover:-translate-y-1 active:translate-y-0 active:scale-95 cursor-pointer shadow-lg` : ''}

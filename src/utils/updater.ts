@@ -70,18 +70,15 @@ export async function downloadAndInstallUpdate(
       }
     });
 
-    // restart the app after installing (windows might close before this runs tho)
     const { relaunch } = await import('@tauri-apps/plugin-process');
     await relaunch();
     return true;
   } catch (e) {
     console.error('Update install failed:', e);
-    throw e; // let the UI know something went wrong
+    throw e;
   }
 }
 
-// fallback for dev mode - just checks version.json on github
-// can't actually install anything, just tells you there's an update
 async function checkForUpdateFallback(): Promise<UpdateInfo | null> {
   try {
     const controller = new AbortController();

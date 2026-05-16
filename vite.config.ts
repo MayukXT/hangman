@@ -22,6 +22,9 @@ export default defineConfig({
     strictPort: true,
     hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
     watch: { ignored: ["**/src-tauri/**"] },
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
   },
   build: {
     // Webview2 on Windows uses Chromium ~105; esnext can break it

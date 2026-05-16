@@ -1,6 +1,6 @@
 {
-  "version": "v2.3.2",
+  "version": "v2.3.3",
   "download_url": "https://github.com/MayukXT/hangman/releases/latest",
-  "changelog": "Fixed the updater issue",
-  "release_date": "2026-04-12"
+  "changelog": "Shortened system copy and polished in-game messaging",
+  "release_date": "2026-05-16"
 }

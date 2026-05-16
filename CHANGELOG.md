@@ -24,6 +24,15 @@ All notable changes to HANGMAN will be documented in this file.
 
 ---
 
+## [v2.3.3] - 2026-05-16
+
+### Changed
+- **System Copy**: Shortened abort, reset, update, rules, and name-entry messages for faster reading.
+- **Menu Copy**: Tightened mode descriptions while keeping the arcade-horror tone.
+- **Code Cleanup**: Removed noisy inline comments from UI components touched by this pass.
+
+---
+
 ## [v2.3.0] - 2026-04-10
 
 ### Fixed
